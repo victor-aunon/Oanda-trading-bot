@@ -4,6 +4,7 @@ import asyncio
 # Packages
 from bs4 import BeautifulSoup
 from pyppeteer import launch
+from pyppeteer.errors import TimeoutError
 
 fx_url = "https://www.oanda.com/us-en/trading/instruments/"
 crypto_url = "https://www.oanda.com/eu-en/trading/cfds/cryptocurrencies/"
