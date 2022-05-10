@@ -102,12 +102,12 @@ class Messages:
         if self.lang == "ES-ES":
             response = f"Orden de STOP {pair} aceptada"
         elif self.lang == "EN-US":
-            response = f"STOP order{pair} accepted"
+            response = f"STOP order {pair} accepted"
         return response
 
     def limit_order_accepted(self, pair: str) -> str:
         if self.lang == "ES-ES":
             response = f"Orden de LÍMITE {pair} aceptada"
         elif self.lang == "EN-US":
-            response = f"LIMIT order{pair} accepted"
+            response = f"LIMIT order {pair} accepted"
         return response
