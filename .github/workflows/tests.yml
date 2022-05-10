@@ -23,4 +23,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install tox tox-gh-actions
     - name: Test with tox
+      env:
+        oanda_token: ${{ testing.oanda_token }}
+        oanda_account_id: ${{ testing.oanda_account_id }}
       run: tox
