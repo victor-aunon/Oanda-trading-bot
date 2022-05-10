@@ -97,7 +97,7 @@ class MACDEMAATRStrategy(bt.Strategy):
                 self.messages,
                 self.db_session,
                 self.account_type,
-                self.tts if self.tts else None
+                self.tts if self.config["tts"] else None
             )
             self.data_ready[pair] = False
             self.units[pair] = (
@@ -463,17 +463,18 @@ def parse_args(pargs=None):
     return parser.parse_args(pargs)
 
 
-def main(config_file=None, db_connection=None, testing=False):
+def main(config_obj=None, db_connection=None, testing=False):
     print("====== Starting backtrader ======")
     args = parse_args()
 
-    config = config_file if config_file is not None else args.config_file
+    config = config_obj if config_obj is not None else args.config_file
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Load config json file
-    with open(os.path.join(current_dir, config), "r") as file:
-        config = json.load(file)
+    if config_obj is None:
+        with open(os.path.join(current_dir, config), "r") as file:
+            config = json.load(file)
 
     config["db_connection"] = db_connection if db_connection is not None \
         else args.db_connection
