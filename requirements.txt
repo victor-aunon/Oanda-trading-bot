@@ -1,0 +1,8 @@
+backtrader==1.9.76.123
+beautifulsoup4==4.9.1
+pyppeteer==1.0.2
+pyttsx3==2.90
+requests==2.27.1
+sqlalchemy==1.4.36
+types-requests==2.27.25
+yfinance==0.1.70

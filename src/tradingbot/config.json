@@ -1,0 +1,25 @@
+{
+    "oanda_token": "your-oanda-token",
+    "oanda_account_id": "your-oanda-account-id",
+    "practice": true,
+    "timeframe": "Minutes",
+    "timeframe_num": 1,
+    "pairs": ["EURUSD"],
+    "risk": 0.0001,
+    "account_currency": "EUR",
+    "telegram_token": "your-telegram-bot-token",
+    "telegram_chat_id": "your-telegram-chat-id",
+    "telegram_report_frequency": "Daily",
+    "language": "EN-US",
+    "tts": true,
+    "strategy_params": {
+        "interval": "1m",
+        "macd_fast_ema": 5,
+        "macd_slow_ema": 26,
+        "macd_signal_ema": 8,
+        "ema_period": 220,
+        "atr_period": 14,
+        "atr_distance": 1.1,
+        "profit_risk_ratio": 1.5
+    }
+}

@@ -1,0 +1,21 @@
+# vscode folder
+.history
+.vscode
+
+# python folders
+virtualenv
+src/oanda_trading_bot.egg-info
+.mypy_cache
+.pytest_cache
+.tox
+__pycache__
+
+# config files
+config_dev.json
+config_prod.json
+
+# other files
+.coverage
+api.py
+trades.db
+test.db
