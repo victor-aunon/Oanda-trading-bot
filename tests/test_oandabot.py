@@ -16,7 +16,7 @@ config = {
     "practice": True,
     "timeframe": "Minutes",
     "timeframe_num": 1,
-    "pairs": ["EURNZD"],
+    "pairs": ["EUR_NZD"],
     "risk": 0.0001,
     "account_currency": "EUR",
     "language": "EN-US",

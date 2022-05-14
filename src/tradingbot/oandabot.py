@@ -1,9 +1,10 @@
 # Libraries
 import argparse
+import ast
 from datetime import datetime
 import json
-import math
 import os
+from pprint import pprint
 
 # Packages
 import backtrader as bt
@@ -17,24 +18,10 @@ from sqlalchemy.orm import Session
 
 # Local
 from dbmodels.trade import Base
-from utils.cash_manager import CashManager
+from utils.instrument_manager import InstrumentManager
 from utils.messages import Messages
 from utils.order_manager import OrderManager
-from utils.spread_scrapper import SpreadScrapper
 from utils.tts import TTS
-
-# PAIRS = [
-#     "EURNZD",
-#     "EURUSD",
-#     "GBPAUD",
-#     "EURCAD",
-#     "EURAUD",
-#     "USDAUD",
-#     "EURGBP",
-#     "GBPCAD",
-#     "USDJPY",
-#     "EURCHF",
-# ]
 
 
 class MACDEMAATRStrategy(bt.Strategy):
@@ -60,6 +47,15 @@ class MACDEMAATRStrategy(bt.Strategy):
         engine = create_engine(kwargs["db_connection"])
         Base.metadata.create_all(engine)
         self.db_session = Session(bind=engine)
+        self.instrument_manager = InstrumentManager(self.config)
+        self.order_manager = OrderManager(
+            self.messages,
+            self.db_session,
+            self.instrument_manager,
+            self.account_type,
+            self.pairs,
+            self.tts if self.config["tts"] else None
+        )
         self.initialize_dicts()
 
     def initialize_dicts(self):
@@ -68,10 +64,7 @@ class MACDEMAATRStrategy(bt.Strategy):
         self.macd = {}
         self.ema = {}
         self.atr = {}
-        self.cash_manager = {}
-        self.order_manager = {}
         self.data_ready = {}
-        self.units = {}
         # Fill the previous dictionaries
         for pair in self.pairs:
             # Indicators
@@ -85,24 +78,7 @@ class MACDEMAATRStrategy(bt.Strategy):
             )
             self.ema[pair] = EMA(data.close, period=self.p["ema_period"])
             self.atr[pair] = ATR(data, period=self.p["atr_period"])
-            # Other dictionaries
-            self.cash_manager[pair] = CashManager(
-                self.risk,
-                pair[0:3],
-                pair[3:],
-                self.account_currency,
-                self.interval,
-            )  # TODO cashmanager autodetects forex or crypto
-            self.order_manager[pair] = OrderManager(
-                self.messages,
-                self.db_session,
-                self.account_type,
-                self.tts if self.config["tts"] else None
-            )
             self.data_ready[pair] = False
-            self.units[pair] = (
-                1e2 if pair[3:] == "JPY" else 1e4
-            )  # TODO set in the cash manager and allow cryptocoins
 
     @staticmethod
     def datetime_to_str(timestamp):
@@ -214,38 +190,7 @@ class MACDEMAATRStrategy(bt.Strategy):
                 self.data_ready[pair] = False
 
     def notify_order(self, order):
-        pair = order.data._name
-        if self.order_manager[pair].has_buyed:
-            self.log(
-                self.order_manager[pair].manage_buy_order(
-                    order,
-                    self.cash_manager[pair],
-                    self.datetime_to_str(self.data[pair].datetime.datetime(0)),
-                )
-            )
-        elif self.order_manager[pair].has_selled:
-            self.log(
-                self.order_manager[pair].manage_sell_order(
-                    order,
-                    self.cash_manager[pair],
-                    self.datetime_to_str(self.data[pair].datetime.datetime(0)),
-                )
-            )
-        if self.config["debug"]:
-            print(
-                order.data._name,
-                order.ref,
-                order.created.size,
-                order.created.price,
-                order.price,
-                order.size,
-                order.ordtypename(),
-                order.getordername(),
-                order.getstatusname(),
-                order.executed.value,
-                order.executed.price,
-                order.executed.dt
-            )
+        pass
 
     def notify_trade(self, trade):
         pass
@@ -254,13 +199,18 @@ class MACDEMAATRStrategy(bt.Strategy):
         if isinstance(msg, dict):
             if "errorCode" in msg:
                 self.log(f"{msg.errorCode} - {msg.errorMsg}")  # type: ignore
-        elif "id" in msg:
-            pass
+        elif "batchID" in msg:
+            res_dict = ast.literal_eval(msg)
+            if self.config["debug"]:
+                pprint(res_dict)
+            response = self.order_manager.manage_transaction(res_dict)
+            if response != "":
+                self.log(response)
         else:
             self.log(msg)
 
     def next(self):
-        # Iterate over each forex pair since data is a list of feeds named
+        # Iterate over each currency pair since data is a list of feeds named
         # by each pair
         for pair in self.pairs:
             # Only do operations if the data is ready (LIVE)
@@ -268,7 +218,7 @@ class MACDEMAATRStrategy(bt.Strategy):
                 return
 
             # Log the closing price
-            timestamp = self.data[pair].datetime.datetime(0)
+            # timestamp = self.data[pair].datetime.datetime(0)
             close = self.data[pair].close[0]
             text = f"{pair} - {close}"
             if self.config["debug"]:
@@ -279,13 +229,13 @@ class MACDEMAATRStrategy(bt.Strategy):
                 raise bt.StrategySkipError
 
             # Check if a buy order could be opened
-            if not self.order_manager[pair].has_buyed:
+            if not self.order_manager.has_buyed(pair):
                 if self.near_buy_signal(pair):
                     self.log(self.messages.near_buy_signal(pair))
                     if self.config["tts"]:
                         self.tts.say(
                             self.messages.near_buy_signal(
-                                f"{pair[0:3]} {pair[3:]}"
+                                f"{' '.join(pair.split('_'))}"
                             )
                         )
                 if self.enter_buy_signal(pair):
@@ -296,48 +246,35 @@ class MACDEMAATRStrategy(bt.Strategy):
                     # )
                     # valid = 0 if date.weekday() == 4 else None
 
-                    # Get the current spread
-                    spread_pips = SpreadScrapper.get_spread(pair)
-                    spread = spread_pips / self.units[pair]
-
                     # Calculate SL and TK based on ATR and Profit/Risk ratio
+                    units = self.instrument_manager.get_units(pair)
                     stop_loss = self.atr[pair].atr[0] * self.atr_dist
-                    s_l_pips = stop_loss * self.units[pair]
+                    s_l_pips = stop_loss * units
                     take_profit = stop_loss * self.p_r_ratio
 
                     # Calculate lot size
-                    quantity = self.cash_manager[pair].get_quantity(
-                        self.broker.getcash(),
-                        s_l_pips,
-                        self.datetime_to_str(timestamp)
-                    )
                     size = self.getsizer().getsizing(
                         self.data[pair],
                         isbuy=True,
                         pips=s_l_pips / self.broker.o.get_leverage()
                     )
 
-                    # Conform to the minimum price variation
-                    # Multiplied and divided by 10 to round the pip/10
-                    sl_price = math.floor(
-                        (close + spread - stop_loss) * self.units[pair] * 10
-                    ) / (self.units[pair] * 10)
-                    tk_price = math.ceil(
-                        (close + spread + take_profit) * self.units[pair] * 10
-                    ) / (self.units[pair] * 10)
+                    # Get the current ask price and calculate SL and TK
+                    ask_price = self.instrument_manager.get_ask_price(pair)
+                    sl_price = ask_price - stop_loss
+                    tk_price = ask_price + take_profit
 
                     if self.config["debug"]:
                         self.log(
                             (
                                 f"Pair: {pair} Close: {close} "
-                                f"Close (w/spread): {(close + spread):.5f} "
-                                f"Spread: {spread:.2f} "
+                                f"Ask: {(ask_price):.5f} "
                                 f"ATR: {self.atr[pair].atr[0]:.4f} "
                                 f"SL (pips): {s_l_pips:.2f} TK (pips): "
-                                f"{(take_profit * self.units[pair]):.2f} "
+                                f"{(take_profit * units):.2f} "
                                 f"SL price: {sl_price:.5f} "
                                 f"TK price: {tk_price:.5f} "
-                                f"Quantity: {quantity} Size: {size}"
+                                f"Size: {size}"
                             )
                         )
 
@@ -352,16 +289,15 @@ class MACDEMAATRStrategy(bt.Strategy):
                         limitprice=tk_price,
                         limitexec=bt.Order.Limit,
                     )
-                    self.order_manager[pair].has_buyed = True
 
             # Check if a sell order could be opened
-            if not self.order_manager[pair].has_selled:
+            if not self.order_manager.has_selled(pair):
                 if self.near_sell_signal(pair):
                     self.log(self.messages.near_sell_signal(pair))
                     if self.config["tts"]:
                         self.tts.say(
                             self.messages.near_sell_signal(
-                                f"{pair[0:3]} {pair[3:]}"
+                                f"{' '.join(pair.split('_'))}"
                             )
                         )
                 if self.enter_sell_signal(pair):
@@ -372,48 +308,35 @@ class MACDEMAATRStrategy(bt.Strategy):
                     # )
                     # valid = 0 if date.weekday() == 4 else None
 
-                    # Get the current spread
-                    spread_pips = SpreadScrapper.get_spread(pair)
-                    spread = spread_pips / self.units[pair]
-
                     # Calculate SL and TK based on ATR and Profit/Risk ratio
+                    units = self.instrument_manager.get_units(pair)
                     stop_loss = self.atr[pair].atr[0] * self.atr_dist
-                    s_l_pips = stop_loss * self.units[pair]
+                    s_l_pips = stop_loss * units
                     take_profit = stop_loss * self.p_r_ratio
 
                     # Calculate lot size
-                    quantity = self.cash_manager[pair].get_quantity(
-                        self.broker.getcash(),
-                        s_l_pips,
-                        self.datetime_to_str(timestamp)
-                    )
                     size = self.getsizer().getsizing(
                         self.data[pair],
                         isbuy=False,
                         pips=s_l_pips / self.broker.o.get_leverage()
                     )
 
-                    # Conform to the minimum price variation
-                    # Multiplied and divided by 10 to round the pip/10
-                    sl_price = math.ceil(
-                        (close - spread + stop_loss) * self.units[pair] * 10
-                    ) / (self.units[pair] * 10)
-                    tk_price = math.floor(
-                        (close - spread - take_profit) * self.units[pair] * 10
-                    ) / (self.units[pair] * 10)
+                    # Get the current bid price and calculate SL and TK
+                    bid_price = self.instrument_manager.get_bid_price(pair)
+                    sl_price = bid_price + stop_loss
+                    tk_price = bid_price - take_profit
 
                     if self.config["debug"]:
                         self.log(
                             (
                                 f"Pair: {pair} Close: {close} "
-                                f"Close (w/spread): {(close + spread):.5f} "
-                                f"Spread: {spread:.2f} "
+                                f"Bid: {bid_price:.5f} "
                                 f"ATR: {self.atr[pair].atr[0]:.4f} "
                                 f"SL (pips): {s_l_pips:.2f} TK (pips): "
-                                f"{(take_profit * self.units[pair]):.2f} "
+                                f"{(take_profit * units):.2f} "
                                 f"SL price: {sl_price:.5f} "
                                 f"TK price: {tk_price:.5f} "
-                                f"Quantity: {quantity} Size: {size}"
+                                f"Size: {size}"
                             )
                         )
 
@@ -428,7 +351,6 @@ class MACDEMAATRStrategy(bt.Strategy):
                         limitprice=tk_price,
                         limitexec=bt.Order.Limit,
                     )
-                    self.order_manager[pair].has_selled = True
 
 
 def parse_args(pargs=None):
@@ -498,7 +420,7 @@ def main(config_obj=None, db_connection=None, testing=False):
 
     for pair in config["pairs"]:
         data = store.getdata(
-            dataname=f"{pair[0:3]}_{pair[3:]}",
+            dataname=pair,
             timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
             compression=config["timeframe_num"]
             # qcheck=20,  # Increase qcheck (0.5 def) to ensure candles every

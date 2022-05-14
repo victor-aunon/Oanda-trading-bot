@@ -19,3 +19,4 @@ config_prod.json
 api.py
 trades.db
 test.db
+set_env_vars*

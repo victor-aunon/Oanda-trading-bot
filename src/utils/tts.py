@@ -2,14 +2,13 @@ import pyttsx3
 
 
 class TTS:
-    def __init__(self, language="EN-US", rate=120) -> None:
+    def __init__(self, language="EN-US", rate=120, driver=None) -> None:
         try:
-            self.engine = pyttsx3.init(debug=False)
+            self.engine = pyttsx3.init(driver, debug=False)
             self.engine.setProperty("rate", rate)
             # Select language voice
             self._set_language(language)
-        except Exception as e:
-            print(e)
+        except ModuleNotFoundError:
             self.engine = pyttsx3.init("dummy", debug=False)
 
     def _set_language(self, language):
@@ -19,7 +18,7 @@ class TTS:
                 in v.id
             ][0]
             self.engine.setProperty("voice", voice.id)
-        except KeyError:
+        except IndexError:
             print(f"Could not find TTS language {language}")
             pass
 

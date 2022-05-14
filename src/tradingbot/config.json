@@ -4,7 +4,7 @@
     "practice": true,
     "timeframe": "Minutes",
     "timeframe_num": 1,
-    "pairs": ["EURUSD"],
+    "pairs": ["EUR_USD"],
     "risk": 0.0001,
     "account_currency": "EUR",
     "telegram_token": "your-telegram-bot-token",

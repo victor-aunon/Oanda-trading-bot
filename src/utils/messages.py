@@ -11,43 +11,95 @@ class Messages:
             response = f"{pair} near BUY signal"
         return response
 
-    def buy_order_placed(self, size: int, pair: str, price: float) -> str:
-        if self.lang == "ES-ES":
-            response = f"Orden de COMPRA {size} {pair} a {price:.4f}"
-        elif self.lang == "EN-US":
-            response = f"BUY order {size} {pair} at {price:.4f}"
-        return response
-
-    def buy_order_canceled(self, pair: str) -> str:
-        if self.lang == "ES-ES":
-            response = f"Orden de COMPRA {pair} cancelada"
-        elif self.lang == "EN-US":
-            response = f"BUY order {pair} canceled"
-        return response
-
-    def stop_buy_order(self, pair: str, amount: float) -> str:
+    def buy_order_submitted(self, size: int, pair: str, id=None) -> str:
         if self.lang == "ES-ES":
             response = (
-                f"Orden de COMPRA {pair} completada por LÍMITE de PÉRDIDAS. "
-                f"{amount} {self.currency} perdidos"
+                f"Orden de COMPRA {abs(size)} {pair}"
+                f"{f' con ID {id}' if id is not None else ''} enviada"
             )
         elif self.lang == "EN-US":
             response = (
-                f"BUY order {pair} completed by STOP LOSS. "
-                f"{amount} {self.currency} lost"
+                f"BUY order {abs(size)} {pair}"
+                f"{f' with ID {id}' if id is not None else ''} submitted"
             )
         return response
 
-    def limit_buy_order(self, pair: str, amount: float) -> str:
+    def buy_order_rejected(self, pair: str, id=None) -> str:
         if self.lang == "ES-ES":
             response = (
-                f"Orden de COMPRA {pair} completada por RECOGIDA de "
-                f"BENEFICIOS. {amount} {self.currency} ganados"
+                f"Orden de COMPRA {pair}"
+                f"{f' con ID {id}' if id is not None else ''} rechazada"
             )
         elif self.lang == "EN-US":
             response = (
-                f"BUY order {pair} completed by TAKE PROFIT. "
-                f"{amount} {self.currency} earned"
+                f"BUY order {pair}"
+                f"{f' with ID {id}' if id is not None else ''} rejected"
+            )
+        return response
+
+    def buy_order_placed(
+        self, size: int, pair: str, price: float, id=None
+    ) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de COMPRA {abs(size)} {pair} a {price:.5f}"
+                f"{f' con ID {id}' if id is not None else ''} aceptada"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"BUY order {abs(size)} {pair} at {price:.5f}"
+                f"{f' with ID {id}' if id is not None else ''} accepted"
+            )
+        return response
+
+    def buy_order_canceled(self, pair: str, amount: float, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de COMPRA {pair}"
+                f"{f' con ID {id}' if id is not None else ''} cancelada. "
+                f"{abs(amount):.2f} {self.currency} "
+                f"{'ganados' if amount >= 0 else 'perdidos'}"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"BUY order {pair}"
+                f"{f' with ID {id}' if id is not None else ''} canceled. "
+                f"{abs(amount):.2f} {self.currency} "
+                f"{'earned' if amount >= 0 else 'lost'}"
+            )
+        return response
+
+    def stop_buy_order(self, pair: str, amount: float, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de COMPRA {pair}"
+                f"{f' con ID {id}' if id is not None else ''}"
+                " completada por LÍMITE de PÉRDIDAS. "
+                f"{amount:.2f} {self.currency} perdidos"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"BUY order {pair}"
+                f"{f' with ID {id}' if id is not None else ''}"
+                " completed by STOP LOSS. "
+                f"{amount:.2f} {self.currency} lost"
+            )
+        return response
+
+    def limit_buy_order(self, pair: str, amount: float, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de COMPRA {pair}"
+                f"{f' con ID {id}' if id is not None else ''}"
+                " completada por RECOGIDA de BENEFICIOS. "
+                f"{amount:.2f} {self.currency} ganados"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"BUY order {pair}"
+                f"{f' with ID {id}' if id is not None else ''}"
+                " completed by TAKE PROFIT. "
+                f"{amount:.2f} {self.currency} earned"
             )
         return response
 
@@ -58,56 +110,146 @@ class Messages:
             response = f"{pair} near SELL signal"
         return response
 
-    def sell_order_placed(self, size: int, pair: str, price: float) -> str:
-        if self.lang == "ES-ES":
-            response = f"Orden de VENTA {abs(size)} {pair} a {price:.4f}"
-        elif self.lang == "EN-US":
-            response = f"SELL order {abs(size)} {pair} at {price:.4f}"
-        return response
-
-    def sell_order_canceled(self, pair: str) -> str:
-        if self.lang == "ES-ES":
-            response = f"Orden de VENTA {pair} cancelada"
-        elif self.lang == "EN-US":
-            response = f"SELL order {pair} canceled"
-        return response
-
-    def stop_sell_order(self, pair: str, amount: float) -> str:
+    def sell_order_submitted(self, size: int, pair: str, id=None) -> str:
         if self.lang == "ES-ES":
             response = (
-                f"Orden de VENTA {pair} completada por LÍMITE de PÉRDIDAS. "
-                f"{amount} {self.currency} perdidos"
+                f"Orden de VENTA {abs(size)} {pair}"
+                f"{f' con ID {id}' if id is not None else ''} enviada"
             )
         elif self.lang == "EN-US":
             response = (
-                f"SELL order {pair} completed by STOP LOSS. "
-                f"{amount} {self.currency} lost"
+                f"SELL order {abs(size)} {pair}"
+                f"{f' with ID {id}' if id is not None else ''} submitted"
             )
         return response
 
-    def limit_sell_order(self, pair: str, amount: float) -> str:
+    def sell_order_rejected(self, pair: str, id=None) -> str:
         if self.lang == "ES-ES":
             response = (
-                f"Orden de VENTA {pair} completada por RECOGIDA de "
-                f"BENEFICIOS. {amount} {self.currency} ganados"
+                f"Orden de VENTA {pair}"
+                f"{f' con ID {id}' if id is not None else ''} rechazada"
             )
         elif self.lang == "EN-US":
             response = (
-                f"SELL order {pair} completed by TAKE PROFIT. "
-                f"{amount} {self.currency} earned"
+                f"SELL order {pair}"
+                f"{f' with ID {id}' if id is not None else ''} rejected"
             )
         return response
 
-    def stop_order_accepted(self, pair: str) -> str:
+    def sell_order_placed(
+        self, size: int, pair: str, price: float, id=None
+    ) -> str:
         if self.lang == "ES-ES":
-            response = f"Orden de STOP {pair} aceptada"
+            response = (
+                f"Orden de VENTA {abs(size)} {pair} a {price:.5f}"
+                f"{f' con ID {id}' if id is not None else ''} aceptada"
+            )
         elif self.lang == "EN-US":
-            response = f"STOP order {pair} accepted"
+            response = (
+                f"SELL order {abs(size)} {pair} at {price:.5f}"
+                f"{f' with ID {id}' if id is not None else ''} accepted"
+            )
         return response
 
-    def limit_order_accepted(self, pair: str) -> str:
+    def sell_order_canceled(self, pair: str, amount: float, id=None) -> str:
         if self.lang == "ES-ES":
-            response = f"Orden de LÍMITE {pair} aceptada"
+            response = (
+                f"Orden de VENTA {pair}"
+                f"{f' con ID {id} ' if id is not None else ''} cancelada. "
+                f"{abs(amount):.2f} {self.currency} "
+                f"{'ganados' if amount >= 0 else 'perdidos'}"
+            )
         elif self.lang == "EN-US":
-            response = f"LIMIT order {pair} accepted"
+            response = (
+                f"SELL order {pair}"
+                f"{f' with ID {id} ' if id is not None else ''} canceled. "
+                f"{abs(amount):.2f} {self.currency} "
+                f"{'earned' if amount >= 0 else 'lost'}"
+            )
+        return response
+
+    def stop_sell_order(self, pair: str, amount: float, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de VENTA {pair}"
+                f"{f' con ID {id}' if id is not None else ''}"
+                " completada por LÍMITE de PÉRDIDAS. "
+                f"{amount:.2f} {self.currency} perdidos"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"SELL order {pair}"
+                f"{f' with ID {id}' if id is not None else ''}"
+                " completed by STOP LOSS. "
+                f"{amount:.2f} {self.currency} lost"
+            )
+        return response
+
+    def limit_sell_order(self, pair: str, amount: float, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de VENTA {pair}"
+                f"{f' con ID {id}' if id is not None else ''}"
+                " completada por RECOGIDA de BENEFICIOS. "
+                f"{amount:.2f} {self.currency} ganados"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"SELL order {pair}"
+                f"{f' with ID {id}' if id is not None else ''}"
+                " completed by TAKE PROFIT. "
+                f"{amount:.2f} {self.currency} earned"
+            )
+        return response
+
+    def stop_order_accepted(self, pair: str, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de STOP {pair}"
+                f"{f' con ID {id}' if id is not None else ''} aceptada"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"STOP order {pair}"
+                f"{f' with ID {id}' if id is not None else ''} accepted"
+            )
+        return response
+
+    def stop_order_replaced(self, pair: str, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de STOP {pair}"
+                f"{f' con ID {id}' if id is not None else ''} reajustada"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"STOP order {pair}"
+                f"{f' with ID {id}' if id is not None else ''} replaced"
+            )
+        return response
+
+    def limit_order_accepted(self, pair: str, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de LÍMITE {pair}"
+                f"{f' con ID {id}' if id is not None else ''} aceptada"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"LIMIT order {pair}"
+                f"{f' with ID {id}' if id is not None else ''} accepted"
+            )
+        return response
+
+    def limit_order_replaced(self, pair: str, id=None) -> str:
+        if self.lang == "ES-ES":
+            response = (
+                f"Orden de LÍMITE {pair}"
+                f"{f' con ID {id}' if id is not None else ''} reajustada"
+            )
+        elif self.lang == "EN-US":
+            response = (
+                f"LIMIT order {pair}"
+                f"{f' with ID {id}' if id is not None else ''} replaced"
+            )
         return response

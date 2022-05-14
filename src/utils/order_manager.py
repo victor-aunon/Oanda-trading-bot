@@ -1,245 +1,424 @@
 # Libraries
 from datetime import datetime
+from typing import Any, List, Dict
 
 # Packages
-from backtrader import Order
+from sqlalchemy import Boolean
 from sqlalchemy.orm import Session
 
 # Local
-from utils.cash_manager import CashManager
+from utils.instrument_manager import InstrumentManager
 from utils.messages import Messages
 from dbmodels.trade import Trade
+
+
+REJECTED_REASONS = [
+    "STOP_LOSS_ON_FILL_LOSS",
+    "TAKE_PROFIT_ON_FILL_LOSS",
+    "INSUFFICIENT_LIQUIDITY"
+]
+
+CANCEL_REASONS = ["MARKET_ORDER_POSITION_CLOSEOUT", "MARKET_ORDER_TRADE_CLOSE"]
 
 
 class OrderManager:
     def __init__(
         self, messages_engine: Messages,
         db_session: Session,
+        instrument_manager: InstrumentManager,
         account_type: str,
+        pairs: List[str],
         tts_engine=None
     ) -> None:
         self.messages = messages_engine
         self.db_session = db_session
+        self.instrument_manager = instrument_manager
         self.account_type = account_type
         self.tts = tts_engine
-        self.has_buyed = False
-        self.has_selled = False
-        self.buy_order = {
-            "MK": None, "SL": None, "TK": None, "entry_time": None
-        }
-        self.sell_order = {
-            "MK": None, "SL": None, "TK": None,  "entry_time": None
-        }
+        self.selled, self.buyed = {}, {}
+        self.sell_order, self.buy_order = {}, {}
+        self.trade_dict = {}  # type: ignore
+        for pair in pairs:
+            self.buyed[pair] = False
+            self.selled[pair] = False
+            self.buy_order[pair] = {
+                "MK": None, "SL": None, "TK": None, "CANCEL": None
+            }
+            self.sell_order[pair] = {
+                "MK": None, "SL": None, "TK": None, "CANCEL": None
+            }
 
-    def manage_buy_order(
-        self, order, cash_manager: CashManager, timestamp: str
-    ) -> str:
-        pair = order.data._name
-        status = order.getstatusname()
-        type_name = order.getordername()
-        # Register market (main) order. Wait till status is completed instead
-        # of accepted in order to get the execution price
-        if status in ["Completed"] and type_name == "Market":
-            self.buy_order["MK"] = order
-            self.buy_order["entry_time"] = datetime.utcnow()  # type: ignore
-            if self.tts is not None:
-                self.tts.say(
-                    self.messages.buy_order_placed(
-                        order.size, f"{pair[0:3]} {pair[3:]}",
-                        order.executed.price
-                    )
+    def has_buyed(self, pair: str) -> Boolean:
+        return self.buyed[pair]
+
+    def has_selled(self, pair: str) -> Boolean:
+        return self.selled[pair]
+
+    def manage_transaction(self, transaction: Dict[str, Any]) -> str:
+        # Submit market order
+        if transaction["type"] == "MARKET_ORDER" \
+                and transaction["reason"] == "CLIENT_ORDER":
+            pair = transaction["instrument"]
+            # Buy order
+            if float(transaction["units"]) > 0:
+                self.trade_dict[transaction["id"]] = {
+                    "pair": pair, "op_type": "BUY"
+                }
+                response = self.messages.buy_order_submitted(
+                    int(float(transaction["units"])),
+                    f"{' '.join(pair.split('_'))}",
+                    transaction["id"]
                 )
-            response = self.messages.buy_order_placed(
-                order.size, pair, order.executed.price
-            )
-        # Register stop order
-        elif status in ["Accepted"] and type_name == "Stop":
-            self.buy_order["SL"] = order
-            response = self.messages.stop_order_accepted(pair)
-        # Register limit order
-        elif status in ["Accepted"] and type_name == "Limit":
-            self.buy_order["TK"] = order
-            response = self.messages.limit_order_accepted(pair)
-        # Stop order completed
-        elif status in ["Completed"] and type_name == "Stop":
-            loss = round(
-                cash_manager.profit(
-                    self.buy_order["MK"].executed.price,  # type: ignore
-                    order.executed.price,
-                    abs(order.size),
-                    "BUY",
-                    timestamp,
-                ),
-                2,
-            )
-            self._store_trade_in_db("BUY", "SL", cash_manager.units, loss)
-            if self.tts is not None:
-                self.tts.say(
-                    self.messages.stop_buy_order(
-                        f"{pair[0:3]} {pair[3:]}", abs(loss)
-                    )
+            # Sell order
+            else:
+                self.trade_dict[transaction["id"]] = {
+                    "pair": pair, "op_type": "SELL"
+                }
+                response = self.messages.sell_order_submitted(
+                    int(float(transaction["units"])),
+                    f"{' '.join(pair.split('_'))}",
+                    transaction["id"]
                 )
-            self.buy_order = {"MK": None, "SL": None, "TK": None}
-            self.has_buyed = False
-            response = self.messages.stop_buy_order(pair, loss)
+
+        # Market order rejected (stop loss on fill loss)
+        elif transaction["type"] == "ORDER_CANCEL" \
+                and transaction["reason"] in REJECTED_REASONS:
+            if transaction["orderID"] not in self.trade_dict:
+                return ""
+            pair = self.trade_dict[transaction["orderID"]]["pair"]
+            op_type = self.trade_dict[transaction["orderID"]]["op_type"]
+
+            if op_type == "BUY":
+                self.trade_dict.pop(transaction["orderID"], None)
+                response = self.messages.buy_order_rejected(
+                    f"{' '.join(pair.split('_'))}",
+                    transaction["orderID"]
+                )
+            elif op_type == "SELL":
+                self.trade_dict.pop(transaction["orderID"], None)
+                response = self.messages.sell_order_rejected(
+                    f"{' '.join(pair.split('_'))}",
+                    transaction["orderID"]
+                )
+
+        # Register market order
+        elif transaction["type"] == "ORDER_FILL" \
+                and transaction["reason"] == "MARKET_ORDER":
+            pair = transaction["instrument"]
+            # Remove any canceled trade with this pair
+            for key, val in list(self.trade_dict.items()):
+                if val["pair"] == pair:
+                    self.trade_dict.pop(key, None)
+            # Buy order
+            if float(transaction["units"]) > 0:
+                self.buy_order[pair]["MK"] = transaction  # type: ignore
+                self.buyed[pair] = True
+                self.trade_dict[transaction["id"]] = {
+                    "pair": pair, "op_type": "BUY"
+                }
+                if self.tts is not None:
+                    self.tts.say(
+                        self.messages.buy_order_placed(
+                            int(float(transaction["units"])),
+                            f"{' '.join(pair.split('_'))}",
+                            float(transaction["price"])
+                        )
+                    )
+                response = self.messages.buy_order_placed(
+                    int(float(transaction["units"])),
+                    f"{' '.join(pair.split('_'))}",
+                    float(transaction["price"]),
+                    transaction["id"]
+                )
+            # Sell order
+            else:
+                self.sell_order[pair]["MK"] = transaction  # type: ignore
+                self.selled[pair] = True
+                self.trade_dict[transaction["id"]] = {
+                    "pair": pair, "op_type": "SELL"
+                }
+                if self.tts is not None:
+                    self.tts.say(
+                        self.messages.sell_order_placed(
+                            int(float(transaction["units"])),
+                            f"{' '.join(pair.split('_'))}",
+                            float(transaction["price"])
+                        )
+                    )
+                response = self.messages.sell_order_placed(
+                    int(float(transaction["units"])),
+                    f"{' '.join(pair.split('_'))}",
+                    float(transaction["price"]),
+                    transaction["id"]
+                )
+
+        # Register take profit order
+        elif transaction["type"] == "TAKE_PROFIT_ORDER" \
+                and transaction["reason"] == "ON_FILL":
+            pair = self.trade_dict[transaction["tradeID"]]["pair"]
+            op_type = self.trade_dict[transaction["tradeID"]]["op_type"]
+            if op_type == "BUY":
+                self.buy_order[pair]["TK"] = transaction  # type: ignore
+            elif op_type == "SELL":
+                self.sell_order[pair]["TK"] = transaction  # type: ignore
+            response = self.messages.limit_order_accepted(
+                pair, transaction["tradeID"]
+            )
+
+        # Replace take profit order
+        elif transaction["type"] == "TAKE_PROFIT_ORDER" \
+                and transaction["reason"] == "REPLACEMENT":
+            pair = self.trade_dict[transaction["tradeID"]]["pair"]
+            op_type = self.trade_dict[transaction["tradeID"]]["op_type"]
+            if op_type == "BUY":
+                self.buy_order[pair][  # type: ignore
+                    "TK"]["price"] = transaction["price"]  # type: ignore
+                self.buy_order[pair][  # type: ignore
+                    "TK"]["time"] = transaction["time"]  # type: ignore
+            elif op_type == "SELL":
+                self.sell_order[pair][  # type: ignore
+                    "TK"]["price"] = transaction["price"]  # type: ignore
+                self.sell_order[pair][  # type: ignore
+                    "TK"]["time"] = transaction["time"]  # type: ignore
+            response = self.messages.limit_order_replaced(
+                pair, transaction["tradeID"]
+            )
+
+        # Register stop loss order
+        elif transaction["type"] == "STOP_LOSS_ORDER" \
+                and transaction["reason"] == "ON_FILL":
+            pair = self.trade_dict[transaction["tradeID"]]["pair"]
+            op_type = self.trade_dict[transaction["tradeID"]]["op_type"]
+            if op_type == "BUY":
+                self.buy_order[pair]["SL"] = transaction  # type: ignore
+            elif op_type == "SELL":
+                self.sell_order[pair]["SL"] = transaction  # type: ignore
+            response = self.messages.stop_order_accepted(
+                pair, transaction["tradeID"]
+            )
+
+        # Replace stop loss order
+        elif transaction["type"] == "STOP_LOSS_ORDER" \
+                and transaction["reason"] == "REPLACEMENT":
+            pair = self.trade_dict[transaction["tradeID"]]["pair"]
+            op_type = self.trade_dict[transaction["tradeID"]]["op_type"]
+            if op_type == "BUY":
+                self.buy_order[pair][  # type: ignore
+                    "SL"]["price"] = transaction["price"]  # type: ignore
+                self.buy_order[pair][  # type: ignore
+                    "SL"]["time"] = transaction["time"]  # type: ignore
+            elif op_type == "SELL":
+                self.sell_order[pair][  # type: ignore
+                    "SL"]["price"] = transaction["price"]  # type: ignore
+                self.sell_order[pair][  # type: ignore
+                    "SL"]["time"] = transaction["time"]  # type: ignore
+            response = self.messages.stop_order_replaced(
+                pair, transaction["tradeID"]
+            )
+
         # Limit order completed
-        elif status in ["Completed"] and type_name == "Limit":
-            profit = round(
-                cash_manager.profit(
-                    self.buy_order["MK"].executed.price,  # type: ignore
-                    order.executed.price,
-                    abs(order.size),
-                    "BUY",
-                    timestamp,
-                ),
-                2,
-            )
-            self._store_trade_in_db("BUY", "TK", cash_manager.units, profit)
-            if self.tts is not None:
-                self.tts.say(
-                    self.messages.limit_buy_order(
-                        f"{pair[0:3]} {pair[3:]}", profit
+        elif transaction["type"] == "ORDER_FILL" \
+                and transaction["reason"] == "TAKE_PROFIT_ORDER":
+            pair = transaction["instrument"]
+            this_trade_id = transaction["tradesClosed"][0]["tradeID"]
+            # Buy order
+            # Units negative since closing a buy order means a sell order
+            if float(transaction["units"]) < 0:
+                trade_id = \
+                    self.buy_order[pair]["MK"]["id"]  # type: ignore
+                if this_trade_id != trade_id:
+                    return ""
+                self.sell_order[pair]["TK"] = transaction  # type: ignore
+                self._store_trade_in_db("BUY", "TK", pair)
+                profit = float(transaction["pl"])
+                if self.tts is not None:
+                    self.tts.say(
+                        self.messages.limit_buy_order(
+                            f"{' '.join(pair.split('_'))}", profit
+                        )
                     )
+                self.buy_order[pair] = {
+                    "MK": None, "SL": None, "TK": None, "CANCEL": None
+                }
+                self.trade_dict.pop(this_trade_id, None)
+                self.buyed[pair] = False
+                response = self.messages.limit_buy_order(
+                    pair, profit, this_trade_id
                 )
-            self.buy_order = {"MK": None, "SL": None, "TK": None}
-            self.has_buyed = False
-            response = self.messages.limit_buy_order(pair, profit)
-        # Main order canceled
-        elif status in ["Canceled", "Margin"]:
-            if self.tts is not None:
-                self.tts.say(
-                    self.messages.buy_order_canceled(f"{pair[0:3]} {pair[3:]}")
+            # Sell order
+            else:
+                trade_id = \
+                    self.sell_order[pair]["MK"]["id"]  # type: ignore
+                if this_trade_id != trade_id:
+                    return ""
+                self.sell_order[pair]["TK"] = transaction  # type: ignore
+                self._store_trade_in_db("SELL", "TK", pair)
+                profit = float(transaction["pl"])
+                if self.tts is not None:
+                    self.tts.say(
+                        self.messages.limit_sell_order(
+                            f"{' '.join(pair.split('_'))}", profit
+                        )
+                    )
+                self.sell_order[pair] = {
+                    "MK": None, "SL": None, "TK": None, "CANCEL": None
+                }
+                self.trade_dict.pop(this_trade_id, None)
+                self.selled[pair] = False
+                response = self.messages.limit_sell_order(
+                    pair, profit, this_trade_id
                 )
-            self.buy_order = {"MK": None, "SL": None, "TK": None}
-            self.has_buyed = False
-            response = self.messages.buy_order_canceled(pair)
+
+        # Stop order completed
+        elif transaction["type"] == "ORDER_FILL" \
+                and transaction["reason"] == "STOP_LOSS_ORDER":
+            pair = transaction["instrument"]
+            this_trade_id = transaction["tradesClosed"][0]["tradeID"]
+            # Buy order
+            # Units negative since closing a buy order means a sell order
+            if float(transaction["units"]) < 0:
+                trade_id = \
+                    self.buy_order[pair]["MK"]["id"]  # type: ignore
+                if this_trade_id != trade_id:
+                    return ""
+                self.buy_order[pair]["SL"] = transaction  # type: ignore
+                self._store_trade_in_db("BUY", "SL", pair)
+                loss = float(transaction["pl"])
+                if self.tts is not None:
+                    self.tts.say(
+                        self.messages.stop_buy_order(
+                            f"{' '.join(pair.split('_'))}", abs(loss)
+                        )
+                    )
+                self.buy_order[pair] = {
+                    "MK": None, "SL": None, "TK": None, "CANCEL": None
+                }
+                self.trade_dict.pop(this_trade_id, None)
+                self.buyed[pair] = False
+                response = self.messages.stop_buy_order(
+                    pair, abs(loss), this_trade_id
+                )
+            # Sell order
+            else:
+                trade_id = \
+                    self.sell_order[pair]["MK"]["id"]  # type: ignore
+                if this_trade_id != trade_id:
+                    return ""
+                self.sell_order[pair]["SL"] = transaction  # type: ignore
+                self._store_trade_in_db("SELL", "SL", pair)
+                loss = float(transaction["pl"])
+                if self.tts is not None:
+                    self.tts.say(
+                        self.messages.stop_sell_order(
+                            f"{' '.join(pair.split('_'))}", abs(loss)
+                        )
+                    )
+                self.sell_order[pair] = {
+                    "MK": None, "SL": None, "TK": None, "CANCEL": None
+                }
+                self.trade_dict.pop(this_trade_id, None)
+                self.selled[pair] = False
+                response = self.messages.stop_sell_order(
+                    pair, abs(loss), this_trade_id
+                )
+
+        # Market order canceled
+        elif transaction["type"] == "ORDER_FILL" \
+                and transaction["reason"] in CANCEL_REASONS:
+            pair = transaction["instrument"]
+            this_trade_id = transaction["tradesClosed"][0]["tradeID"]
+            # Buy order
+            # Units negative since closing a buy order means a sell order
+            if float(transaction["units"]) < 0:
+                trade_id = \
+                    self.buy_order[pair]["MK"]["id"]  # type: ignore
+                if this_trade_id != trade_id:
+                    return ""
+                self.buy_order[pair]["CANCEL"] = transaction  # type:ignore
+                self._store_trade_in_db("BUY", "CANCEL", pair)
+                pl = float(transaction["pl"])
+                if self.tts is not None:
+                    self.tts.say(
+                        self.messages.buy_order_canceled(
+                            f"{' '.join(pair.split('_'))}", pl
+                        )
+                    )
+                self.buy_order[pair] = {
+                    "MK": None, "SL": None, "TK": None, "CANCEL": None
+                }
+                self.trade_dict.pop(this_trade_id, None)
+                self.buyed[pair] = False
+                response = self.messages.buy_order_canceled(
+                    pair, pl, this_trade_id
+                )
+            # Sell order
+            else:
+                trade_id = \
+                    self.sell_order[pair]["MK"]["id"]  # type: ignore
+                if this_trade_id != trade_id:
+                    return ""
+                self.sell_order[pair]["CANCEL"] = \
+                    transaction  # type: ignore
+                self._store_trade_in_db("SELL", "CANCEL", pair)
+                pl = float(transaction["pl"])
+                if self.tts is not None:
+                    self.tts.say(
+                        self.messages.sell_order_canceled(
+                            f"{' '.join(pair.split('_'))}", pl
+                        )
+                    )
+                self.sell_order[pair] = {
+                    "MK": None, "SL": None, "TK": None, "CANCEL": None
+                }
+                self.trade_dict.pop(this_trade_id, None)
+                self.selled[pair] = False
+                response = self.messages.sell_order_canceled(
+                    pair, pl, this_trade_id
+                )
         else:
             response = ""
         return response
 
-    def manage_sell_order(
-        self, order: Order, cash_manager: CashManager, timestamp: str
-    ) -> str:
-        pair = order.data._name
-        status = order.getstatusname()
-        type_name = order.getordername()
-        # Register market (main) order. Wait till status is completed instead
-        # of accepted in order to get the execution price
-        if status in ["Completed"] and type_name == "Market":
-            self.sell_order["MK"] = order
-            self.sell_order["entry_time"] = datetime.utcnow()  # type: ignore
-            if self.tts is not None:
-                self.tts.say(
-                    self.messages.sell_order_placed(
-                        order.size, f"{pair[0:3]} {pair[3:]}",
-                        order.executed.price
-                    )
-                )
-            response = self.messages.sell_order_placed(
-                order.size, pair, order.executed.price
-            )
-        # Register stop order
-        elif status in ["Accepted"] and type_name == "Stop":
-            self.sell_order["SL"] = order
-            response = self.messages.stop_order_accepted(pair)
-        # Register limit order
-        elif status in ["Accepted"] and type_name == "Limit":
-            self.sell_order["TK"] = order
-            response = self.messages.limit_order_accepted(pair)
-        # Stop order completed
-        elif status in ["Completed"] and type_name == "Stop":
-            loss = round(
-                cash_manager.profit(
-                    self.sell_order["MK"].executed.price,  # type: ignore
-                    order.executed.price,
-                    abs(order.size),
-                    "SELL",
-                    timestamp,
-                ),
-                2,
-            )
-            self._store_trade_in_db("SELL", "SL", cash_manager.units, loss)
-            if self.tts is not None:
-                self.tts.say(
-                    self.messages.stop_sell_order(
-                        f"{pair[0:3]} {pair[3:]}", abs(loss)
-                    )
-                )
-            self.sell_order = {"MK": None, "SL": None, "TK": None}
-            self.has_selled = False
-            response = self.messages.stop_sell_order(pair, loss)
-        # Limit order completed
-        elif status in ["Completed"] and type_name == "Limit":
-            profit = round(
-                cash_manager.profit(
-                    self.sell_order["MK"].executed.price,  # type: ignore
-                    order.executed.price,
-                    abs(order.size),
-                    "SELL",
-                    timestamp,
-                ),
-                2,
-            )
-            self._store_trade_in_db("SELL", "TK", cash_manager.units, profit)
-            if self.tts is not None:
-                self.tts.say(
-                    self.messages.limit_sell_order(
-                        f"{pair[0:3]} {pair[3:]}", profit
-                    )
-                )
-            self.sell_order = {"MK": None, "SL": None, "TK": None}
-            self.has_selled = False
-            response = self.messages.limit_sell_order(pair, profit)
-        # Main order canceled
-        elif status in ["Canceled", "Margin"]:
-            if self.tts is not None:
-                self.tts.say(
-                    self.messages.sell_order_canceled(
-                        f"{pair[0:3]} {pair[3:]}"
-                    )
-                )
-            self.sell_order = {"MK": None, "SL": None, "TK": None}
-            self.has_selled = False
-            response = self.messages.sell_order_canceled(pair)
-        else:
-            response = ""
-        return response
-
-    def _store_trade_in_db(
-        self, type: str, exit_type: str, units: float, profit: float
-    ) -> None:
-        main_order = self.buy_order if type == "BUY" else self.sell_order
-        # if exit_type == "Canceled":
-        exit_price = main_order[exit_type].executed.price  # type: ignore
-
-        duration = datetime.utcnow() - main_order["entry_time"]  # type: ignore
-        spread = abs(
-            main_order["MK"].executed.price  # type: ignore
-            - main_order["MK"].created.price  # type: ignore
+    def _store_trade_in_db(self, type: str, exit_type: str, pair: str) -> None:
+        main_order = self.buy_order[pair] if type == "BUY" \
+            else self.sell_order[pair]
+        entry_time = datetime.utcfromtimestamp(
+            float(main_order["MK"]["time"])  # type: ignore
         )
-        pips = (exit_price
-                - main_order["MK"].executed.price) / units  # type: ignore
+        exit_time = datetime.utcfromtimestamp(
+            float(main_order[exit_type]["time"])  # type: ignore
+        )
+        duration = exit_time - entry_time
+        entry_price = float(main_order["MK"]["price"])  # type: ignore
+        exit_price = float(main_order[exit_type]["price"])  # type: ignore
+        units = self.instrument_manager.get_units(pair)
+        trade_pips = (
+            float(main_order[exit_type]["price"])  # type: ignore
+            - float(main_order["MK"]["price"])  # type: ignore
+            ) * units
         stop_loss = abs(
-            main_order["MK"].executed.price  # type: ignore
-            - main_order["SL"].executed.price  # type: ignore
-        ) / units
+            float(main_order["MK"]["price"])  # type: ignore
+            - float(main_order["SL"]["price"])  # type: ignore
+        ) * units
         take_profit = abs(
-            main_order["MK"].executed.price  # type: ignore
-            - main_order["TK"].executed.price  # type: ignore
-        ) / units
+            float(main_order["MK"]["price"])  # type: ignore
+            - float(main_order["TK"]["price"])  # type: ignore
+        ) * units
+        profit = round(float(main_order[exit_type]["pl"]), 2)  # type:ignore
 
         with self.db_session as session:
             trade_db = Trade(
-                pair=main_order["MK"].data._name,  # type: ignore
+                id=int(main_order["MK"]["id"]),  # type: ignore
+                pair=pair,
                 account=self.account_type,
-                entry_time=main_order["entry_time"],
-                exit_time=datetime.utcnow(),
+                entry_time=entry_time,
+                exit_time=exit_time,
                 duration=duration.seconds,
                 operation=type,
-                open_price=main_order["MK"].executed.price,  # type: ignore
+                size=float(main_order["MK"]["units"]),  # type: ignore
+                entry_price=entry_price,
                 exit_price=exit_price,
-                spread=spread,
-                trade_pips=pips,
+                trade_pips=trade_pips,
                 stop_loss=stop_loss,
                 take_profit=take_profit,
                 canceled=False if exit_type in ["SL", "TK"] else True,

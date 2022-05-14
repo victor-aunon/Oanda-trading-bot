@@ -15,9 +15,9 @@ class Trade(Base):
     exit_time = Column(DateTime)
     duration = Column(Integer)
     operation = Column(String(10))
-    open_price = Column(Float)
+    size = Column(Float)
+    entry_price = Column(Float)
     exit_price = Column(Float)
-    spread = Column(Float)
     trade_pips = Column(Float)
     stop_loss = Column(Float)
     take_profit = Column(Float)
@@ -27,7 +27,7 @@ class Trade(Base):
     def __repr__(self) -> str:
         return (
             f"Trade(id={self.id}, type={self.operation}, "
-            f"entry={self.entry_time} exit={self.exit_time} "
-            f"duration={self.duration // 60} minutes "
+            f"entry={self.entry_time}, exit={self.exit_time}, "
+            f"duration={self.duration // 60} minutes, size={self.size}, "
             f"{'profit' if self.profit >= 0 else 'loss'}={self.profit})"
         )
