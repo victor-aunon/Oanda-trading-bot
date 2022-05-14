@@ -8,7 +8,8 @@ class TTS:
             self.engine.setProperty("rate", rate)
             # Select language voice
             self._set_language(language)
-        except OSError:
+        except Exception as e:
+            print(e)
             self.engine = pyttsx3.init("dummy", debug=False)
 
     def _set_language(self, language):
