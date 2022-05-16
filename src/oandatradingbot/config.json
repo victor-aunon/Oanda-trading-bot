@@ -10,10 +10,10 @@
     "telegram_token": "your-telegram-bot-token",
     "telegram_chat_id": "your-telegram-chat-id",
     "telegram_report_frequency": "Daily",
+    "telegram_report_hour": 22,
     "language": "EN-US",
     "tts": true,
     "strategy_params": {
-        "interval": "1m",
         "macd_fast_ema": 5,
         "macd_slow_ema": 26,
         "macd_signal_ema": 8,

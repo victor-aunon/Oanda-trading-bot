@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 # Local
-from dbmodels.trade import Trade, Base
+from oandatradingbot.dbmodels.trade import Trade, Base
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 

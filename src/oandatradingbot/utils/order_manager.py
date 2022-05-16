@@ -1,15 +1,17 @@
 # Libraries
 from datetime import datetime
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 
 # Packages
 from sqlalchemy import Boolean
 from sqlalchemy.orm import Session
 
 # Local
-from utils.instrument_manager import InstrumentManager
-from utils.messages import Messages
-from dbmodels.trade import Trade
+from oandatradingbot.utils.instrument_manager import InstrumentManager
+from oandatradingbot.utils.messages import Messages
+from oandatradingbot.utils.telegram_bot import TelegramBot
+from oandatradingbot.utils.tts import TTS
+from oandatradingbot.dbmodels.trade import Trade
 
 
 REJECTED_REASONS = [
@@ -28,13 +30,15 @@ class OrderManager:
         instrument_manager: InstrumentManager,
         account_type: str,
         pairs: List[str],
-        tts_engine=None
+        tts_engine: Optional[TTS] = None,
+        telegram_bot: Optional[TelegramBot] = None
     ) -> None:
         self.messages = messages_engine
         self.db_session = db_session
         self.instrument_manager = instrument_manager
         self.account_type = account_type
         self.tts = tts_engine
+        self.telegram_bot = telegram_bot
         self.selled, self.buyed = {}, {}
         self.sell_order, self.buy_order = {}, {}
         self.trade_dict = {}  # type: ignore
@@ -426,4 +430,11 @@ class OrderManager:
             )
             session.add(trade_db)
             session.commit()
-        pass
+
+        # Send Telegram notification if required
+        if self.telegram_bot is not None:
+            if self.telegram_bot.report_freq == "Daily":
+                self.telegram_bot.notify_trade(
+                    int(main_order["MK"]["id"])  # type: ignore
+                )
+        return

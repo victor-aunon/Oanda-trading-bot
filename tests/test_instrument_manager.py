@@ -1,6 +1,6 @@
 import os
 
-from utils.instrument_manager import InstrumentManager
+from oandatradingbot.utils.instrument_manager import InstrumentManager
 
 config = {
     "oanda_token": os.environ["oanda_token"],

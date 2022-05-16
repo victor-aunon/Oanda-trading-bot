@@ -3,3 +3,4 @@ pyttsx3==2.90
 requests==2.27.1
 sqlalchemy==1.4.36
 types-requests==2.27.25
+btoandav20 @ git+https://github.com/happydasch/btoandav20

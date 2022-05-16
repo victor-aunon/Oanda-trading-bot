@@ -7,11 +7,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 # Local
-from dbmodels.trade import Base
-from utils.instrument_manager import InstrumentManager
-from utils.messages import Messages
-from utils.order_manager import OrderManager
-from utils.tts import TTS
+from oandatradingbot.dbmodels.trade import Base
+from oandatradingbot.utils.instrument_manager import InstrumentManager
+from oandatradingbot.utils.messages import Messages
+from oandatradingbot.utils.order_manager import OrderManager
+from oandatradingbot.utils.telegram_bot import TelegramBot
+from oandatradingbot.utils.tts import TTS
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,6 +21,8 @@ config = {
     "oanda_account_id": os.environ["oanda_account_id"],
     "practice": True,
     "pairs": ["EUR_NZD"],
+    "telegram_token": os.environ["telegram_token"],
+    "telegram_chat_id": os.environ["telegram_chat_id"],
 }
 
 
@@ -69,7 +72,7 @@ def test_buy_order_rejected():
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "1", "4000").dict
     assert isinstance(om.manage_transaction(trans), str)
     trans = Transaction(
-        "STOP_LOSS_ON_FILL_LOSS", "ORDER_CANCEL", "1", "4000"
+        "ORDER_CANCEL", "TAKE_PROFIT_ON_FILL_LOSS", "1", "4000"
     ).dict
     assert isinstance(om.manage_transaction(trans), str)
 
@@ -79,7 +82,12 @@ def test_buy_order_stop_loss():
     tts = TTS("EN-US")
     session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    tb = TelegramBot(
+        config["telegram_token"],
+        config["telegram_chat_id"],
+        session
+    )
+    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts, tb)
 
     # Testing exiting by stop loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "2", "4000").dict
@@ -176,7 +184,7 @@ def test_sell_order_rejected():
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "8", "-4000").dict
     assert isinstance(om.manage_transaction(trans), str)
     trans = Transaction(
-        "STOP_LOSS_ON_FILL_LOSS", "ORDER_CANCEL", "8", "-4000"
+        "ORDER_CANCEL", "INSUFFICIENT_LIQUIDITY", "8", "-4000"
     ).dict
     assert isinstance(om.manage_transaction(trans), str)
 
@@ -263,7 +271,7 @@ def test_cancel_sell_order():
     assert om.manage_transaction(trans) == ""
     # Cancel market order
     trans = Transaction(
-        "ORDER_FILL", "MARKET_ORDER_TRADE_CLOSE", "14", "4000"
+        "ORDER_FILL", "MARKET_ORDER_POSITION_CLOSEOUT", "14", "4000"
     ).dict
     assert isinstance(om.manage_transaction(trans), str)
     assert om.has_selled(trans["instrument"]) is False

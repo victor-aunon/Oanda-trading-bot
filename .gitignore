@@ -4,11 +4,12 @@
 
 # python folders
 virtualenv
-src/oanda_trading_bot.egg-info
+src/oandatradingbot.egg-info
 .mypy_cache
 .pytest_cache
 .tox
 __pycache__
+dist
 
 # config files
 config_dev.json
@@ -17,6 +18,5 @@ config_prod.json
 # other files
 .coverage
 api.py
-trades.db
-test.db
+*.db
 set_env_vars*

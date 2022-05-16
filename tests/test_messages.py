@@ -1,6 +1,6 @@
 import pytest
 
-from utils.messages import Messages
+from oandatradingbot.utils.messages import Messages
 
 
 @pytest.mark.parametrize("language", ["EN-US", "ES-ES"])

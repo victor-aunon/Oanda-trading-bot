@@ -1,4 +1,4 @@
-from utils.tts import TTS
+from oandatradingbot.utils.tts import TTS
 
 
 def test_tts():
