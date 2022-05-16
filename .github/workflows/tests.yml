@@ -27,4 +27,6 @@ jobs:
       env:
         oanda_token: ${{ secrets.oanda_token }}
         oanda_account_id: ${{ secrets.oanda_account_id }}
+        telegram_token: ${{ secrets.telegram_token }}
+        telegram_chat_id: ${{ secrets.telegram_chat_id }}
       run: tox
