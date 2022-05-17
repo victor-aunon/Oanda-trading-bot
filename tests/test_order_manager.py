@@ -85,7 +85,8 @@ def test_buy_order_stop_loss():
     tb = TelegramBot(
         config["telegram_token"],
         config["telegram_chat_id"],
-        session
+        session,
+        "EUR", "Trade"
     )
     om = OrderManager(messages, session, im, "Demo", config["pairs"], tts, tb)
 

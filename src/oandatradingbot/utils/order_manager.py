@@ -232,7 +232,7 @@ class OrderManager:
                     self.buy_order[pair]["MK"]["id"]  # type: ignore
                 if this_trade_id != trade_id:
                     return ""
-                self.sell_order[pair]["TK"] = transaction  # type: ignore
+                self.buy_order[pair]["TK"] = transaction  # type: ignore
                 self._store_trade_in_db("BUY", "TK", pair)
                 profit = float(transaction["pl"])
                 if self.tts is not None:
@@ -433,7 +433,7 @@ class OrderManager:
 
         # Send Telegram notification if required
         if self.telegram_bot is not None:
-            if self.telegram_bot.report_freq == "Daily":
+            if self.telegram_bot.report_freq == "Trade":
                 self.telegram_bot.notify_trade(
                     int(main_order["MK"]["id"])  # type: ignore
                 )
