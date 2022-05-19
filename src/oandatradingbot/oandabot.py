@@ -45,7 +45,7 @@ class MACDEMAATRStrategy(bt.Strategy):
         )
         if kwargs["tts"]:
             self.tts = TTS(self.config["language"], 120)
-        engine = create_engine(kwargs["db_connection"])
+        engine = create_engine(kwargs["database_uri"])
         Base.metadata.create_all(engine)
         self.db_session = Session(bind=engine)
         self.instrument_manager = InstrumentManager(self.config)
@@ -447,11 +447,6 @@ def parse_args(pargs=None):
         required=False, help="Configuration json file required to run the bot")
 
     parser.add_argument(
-        '--db-connection',
-        default=f"sqlite:///{os.path.join(current_dir, 'trades.db')}",
-        required=False, help="Database URI where trades are stored")
-
-    parser.add_argument(
         '--debug',
         action="store_true", default=False,
         required=False, help="Show runtime information")
@@ -465,7 +460,7 @@ def parse_args(pargs=None):
     return parser.parse_args(pargs)
 
 
-def main(config_obj=None, db_connection=None, testing=False):
+def main(config_obj=None, testing=False):
     print("====== Starting backtrader ======")
     args = parse_args()
 
@@ -476,8 +471,11 @@ def main(config_obj=None, db_connection=None, testing=False):
     else:
         config = config_obj
 
-    config["db_connection"] = db_connection if db_connection is not None \
-        else args.db_connection
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    if "database_uri" not in config:
+        config["database_uri"] = \
+            f"sqlite:///{os.path.join(current_dir, 'trades.db')}"
 
     config["account_type"] = "Demo" if config["practice"] else "Brokerage"
     config["testing"] = testing

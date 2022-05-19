@@ -1,4 +1,5 @@
 {
+    "database_uri": "the URI of the trades database",
     "oanda_token": "your-oanda-token",
     "oanda_account_id": "your-oanda-account-id",
     "practice": true,

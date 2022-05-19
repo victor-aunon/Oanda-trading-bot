@@ -88,6 +88,7 @@ trade4 = Trade(
 )
 
 config = {
+    "database_uri": f"sqlite:///{os.path.join(current_dir, 'test_oanda.db')}",
     "oanda_token": os.environ["oanda_token"],
     "oanda_account_id": os.environ["oanda_account_id"],
     "practice": True,
@@ -115,7 +116,7 @@ config = {
 
 def create_session():
     engine = create_engine(
-        f"sqlite:///{os.path.join(current_dir, 'test_oanda.db')}", echo=True
+        config["database_uri"], echo=True
     )
     Base.metadata.create_all(engine)
     return Session(bind=engine)
@@ -132,10 +133,9 @@ def test_oandabot():
     session.close()
 
     with pytest.raises(backtrader.errors.StrategySkipError):
-        print(f"sqlite:///{os.path.join(current_dir, 'test_oanda.db')}")
+        print(config["database_uri"])
         main(
             config,
-            f"sqlite:///{os.path.join(current_dir, 'test_oanda.db')}",
             True
         )
 

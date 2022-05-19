@@ -63,6 +63,7 @@ Since version 1.1.0, the bot is able to notify trades and send daily and weekly 
 
  A sample of the JSON configuration file can be found in `src/tradingbot/config.json` which contains the following keys:
 
+ - **`database_uri`**: A string representing the address of the trades database. If omitted, the bot will create a sqlite database in `/src/oandatradingbot/trades.db`.
  - **`oanda_token`**: A string representing the OANDA access token explained in [OANDA token section](#creating-an-oanda-account-and-an-access-token).
  - **`oanda_account_id`**: A string representing the OANDA account ID number explained in [OANDA token section](#creating-an-oanda-account-and-an-access-token).
  - **`practice`**: `true` if you want to use the OANDA test environment, otherwise `false`.
@@ -93,7 +94,6 @@ Since version 1.1.0, the bot is able to notify trades and send daily and weekly 
 You can run the bot directly from the command line with `python -m oandatradingbot` using the following arguments:
 
 - **`--config-file`**: followed by the JSON configuration file. If omitted, the bot will use the file in `/src/oandatradingbot/config.json`.
-- **`--db-connection`**: followed by database URI. If omitted, the bot will create a sqlite database in `/src/oandatradingbot/trades.db`.
 - **`--debug`**: by adding this argument, the bot will show more information to the console.
 
 ## Testing

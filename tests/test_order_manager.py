@@ -17,6 +17,7 @@ from oandatradingbot.utils.tts import TTS
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 config = {
+    "database_uri": f"sqlite:///{os.path.join(current_dir, 'test.db')}",
     "oanda_token": os.environ["oanda_token"],
     "oanda_account_id": os.environ["oanda_account_id"],
     "practice": True,
@@ -55,7 +56,7 @@ class Transaction:
 
 def create_session():
     engine = create_engine(
-        f"sqlite:///{os.path.join(current_dir, 'test.db')}", echo=True
+        config["database_uri"], echo=True
     )
     Base.metadata.create_all(engine)
     return Session(bind=engine)
@@ -169,9 +170,6 @@ def test_cancel_buy_order():
     ).dict
     assert isinstance(om.manage_transaction(trans), str)
     assert om.has_buyed(trans["instrument"]) is False
-
-    # Delete db
-    os.remove(os.path.join(current_dir, 'test.db'))
 
 
 def test_sell_order_rejected():
@@ -290,4 +288,5 @@ def test_other_order():
     assert om.manage_transaction(trans) == ""
 
     # Delete db
+    session.close_all()
     os.remove(os.path.join(current_dir, 'test.db'))
