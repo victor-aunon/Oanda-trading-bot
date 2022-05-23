@@ -101,9 +101,9 @@ def main(config_obj=None, testing=False):
         config[param] = config["strategy_params"][param]
     config.pop("strategy_params", None)
 
-    cerebro = bt.Cerebro(stdstats=True)
-
     for pair in list(config["pairs"]):  # type: ignore
+        cerebro = bt.Cerebro(stdstats=True)
+
         market = "fx" if pair.split("_")[0] not in CRYPTOS else "crypto"
         print(f"Downloading {pair} feed...")
         feed = FinancialFeed(pair, market, config['interval']).get_feed()
