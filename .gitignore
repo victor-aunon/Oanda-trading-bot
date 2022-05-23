@@ -10,12 +10,15 @@ src/oandatradingbot.egg-info
 .tox
 __pycache__
 dist
+results
 
 # config files
-config_dev.json
-config_prod.json
+*dev.json
+*prod.json
+*optimize.json
 
 # other files
+optimizer
 .coverage
 api.py
 *.db

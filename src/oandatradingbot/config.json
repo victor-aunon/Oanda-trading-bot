@@ -6,7 +6,7 @@
     "timeframe": "Minutes",
     "timeframe_num": 1,
     "pairs": ["EUR_USD"],
-    "risk": 0.0001,
+    "risk": 0.1,
     "account_currency": "EUR",
     "telegram_token": "your-telegram-bot-token",
     "telegram_chat_id": "your-telegram-chat-id",
@@ -15,12 +15,12 @@
     "language": "EN-US",
     "tts": true,
     "strategy_params": {
-        "macd_fast_ema": 5,
+        "macd_fast_ema": 12,
         "macd_slow_ema": 26,
-        "macd_signal_ema": 8,
-        "ema_period": 220,
+        "macd_signal_ema": 9,
+        "ema_period": 200,
         "atr_period": 14,
-        "atr_distance": 1.1,
+        "atr_distance": 1.2,
         "profit_risk_ratio": 1.5
     }
 }

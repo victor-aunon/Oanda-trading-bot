@@ -1,6 +1,11 @@
 backtrader==1.9.76.123
+fsspec==2022.5.0
+matplotlib==3.2.2
+openpyxl==3.0.10
 pyttsx3==2.90
 requests==2.27.1
 sqlalchemy==1.4.36
 types-requests==2.27.25
+xlsxwriter==3.0.3
+yfinance==0.1.70
 btoandav20 @ git+https://github.com/happydasch/btoandav20
