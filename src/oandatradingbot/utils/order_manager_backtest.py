@@ -1,5 +1,5 @@
 # Libraries
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # Packages
 from backtrader import Order, BackBroker
@@ -42,7 +42,7 @@ class OrderManagerBackTest:
             self.trades[pair] = []
 
     def manage_buy_order(
-        self, order: Order, timestamp: str
+        self, order: Order, size: float, timestamp: str, last_close: float
     ) -> str:
         pair = order.data._name
         status = order.getstatusname()
@@ -53,7 +53,7 @@ class OrderManagerBackTest:
             self.buy_order[pair]["MK"] = order
             self.buy_order[pair]["entry_time"] = timestamp  # type: ignore
             response = self.messages.buy_order_placed(
-                round(order.size, 2), pair, order.executed.price
+                round(size, 2), pair, order.executed.price
             )
         # Register stop order
         elif status in ["Accepted"] and type_name == "Stop":
@@ -66,7 +66,7 @@ class OrderManagerBackTest:
         # Stop order completed
         elif status in ["Completed"] and type_name == "Stop":
             self.buy_order[pair]["SL"] = order
-            loss = order.size  # Size is already negative
+            loss = size * -1
             self.broker.set_cash(self.broker.get_cash() + loss)
             self.buy_order[pair]["exit_time"] = timestamp  # type: ignore
             self._store_trade("BUY", "SL", pair, loss)
@@ -82,7 +82,7 @@ class OrderManagerBackTest:
         # Limit order completed
         elif status in ["Completed"] and type_name == "Limit":
             self.buy_order[pair]["TK"] = order
-            profit = abs(order.size) * self.p_r_ratio
+            profit = size * self.p_r_ratio
             self.broker.set_cash(self.broker.get_cash() + profit)
             self.buy_order[pair]["exit_time"] = timestamp  # type: ignore
             self._store_trade("BUY", "TK", pair, profit)
@@ -95,12 +95,36 @@ class OrderManagerBackTest:
             }
             self.buyed[pair] = False
             response = self.messages.limit_buy_order(pair, profit)
+        elif status == "Expired":
+            if self.buy_order[pair]["MK"] is None:
+                return ""
+            open = self.buy_order[pair]["MK"].executed.price  # type: ignore
+            if last_close >= open:
+                tk = self.buy_order[pair]["TK"].price  # type: ignore
+                pl = (last_close - open) / (tk - open) \
+                    * size * self.p_r_ratio
+            else:
+                sl = self.buy_order[pair]["SL"].price  # type: ignore
+                pl = (open - last_close) / (open - sl) \
+                    * (size * -1)
+            self.broker.set_cash(self.broker.get_cash() + pl)
+            self.buy_order[pair]["exit_time"] = timestamp  # type: ignore
+            self._store_trade("BUY", "CANCEL", pair, pl, last_close)
+            self.buy_order[pair] = {
+                "MK": None,
+                "SL": None,
+                "TK": None,
+                "entry_time": None,
+                "exit_time": None
+            }
+            self.buyed[pair] = False
+            response = self.messages.buy_order_canceled(pair, pl)
         else:
             response = ""
         return response
 
     def manage_sell_order(
-        self, order, timestamp: str
+        self, order: Order, size: float, timestamp: str, last_close: float
     ) -> str:
         pair = order.data._name
         status = order.getstatusname()
@@ -111,7 +135,7 @@ class OrderManagerBackTest:
             self.sell_order[pair]["MK"] = order
             self.sell_order[pair]["entry_time"] = timestamp  # type: ignore
             response = self.messages.sell_order_placed(
-                round(order.size, 2), pair, order.executed.price
+                round(size, 2), pair, order.executed.price
             )
         # Register stop order
         elif status in ["Accepted"] and type_name == "Stop":
@@ -124,7 +148,7 @@ class OrderManagerBackTest:
         # Stop order completed
         elif status in ["Completed"] and type_name == "Stop":
             self.sell_order[pair]["SL"] = order
-            loss = order.size * -1  # Size is positive
+            loss = size * -1
             self.broker.set_cash(self.broker.get_cash() + loss)
             self.sell_order[pair]["exit_time"] = timestamp  # type: ignore
             self._store_trade("SELL", "SL", pair, loss)
@@ -140,7 +164,7 @@ class OrderManagerBackTest:
         # Limit order completed
         elif status in ["Completed"] and type_name == "Limit":
             self.sell_order[pair]["TK"] = order
-            profit = order.size * self.p_r_ratio  # Size is already positve
+            profit = size * self.p_r_ratio
             self.broker.set_cash(self.broker.get_cash() + profit)
             self.sell_order[pair]["exit_time"] = timestamp  # type: ignore
             self._store_trade("SELL", "TK", pair, profit)
@@ -153,20 +177,49 @@ class OrderManagerBackTest:
             }
             self.selled[pair] = False
             response = self.messages.limit_sell_order(pair, profit)
+        elif status == "Expired":
+            if self.sell_order[pair]["MK"] is None:
+                return ""
+            open = self.sell_order[pair]["MK"].executed.price  # type: ignore
+            if last_close <= open:
+                tk = self.sell_order[pair]["TK"].price  # type: ignore
+                pl = (open - last_close) / (open - tk) \
+                    * size * self.p_r_ratio
+            else:
+                sl = self.sell_order[pair]["SL"].price  # type: ignore
+                pl = (last_close - open) / (sl - open) \
+                    * size * -1
+            self.broker.set_cash(self.broker.get_cash() + pl)
+            self.sell_order[pair]["exit_time"] = timestamp  # type: ignore
+            self._store_trade("SELL", "CANCEL", pair, pl, last_close)
+            self.sell_order[pair] = {
+                "MK": None,
+                "SL": None,
+                "TK": None,
+                "entry_time": None,
+                "exit_time": None
+            }
+            self.selled[pair] = False
+            response = self.messages.sell_order_canceled(pair, pl)
         else:
             response = ""
         return response
 
     def _store_trade(
-        self, op_type: str, order_type: str, pair: str, pl: float
+        self, op_type: str, order_type: str, pair: str, pl: float,
+        exit_price: Optional[float] = None
     ) -> None:
         if op_type == "BUY":
             main_order = self.buy_order[pair]
         elif op_type == "SELL":
             main_order = self.sell_order[pair]
 
-        entry_price = main_order["MK"].executed.price  # type: ignore
-        exit_price = main_order[order_type].executed.price  # type: ignore
+        if exit_price is None:
+            exit_price = main_order[order_type].executed.price  # type: ignore
+        try:
+            entry_price = main_order["MK"].executed.price  # type: ignore
+        except Exception:
+            entry_price = exit_price
         sl_price = main_order["SL"].created.price  # type: ignore
         tk_price = main_order["TK"].created.price  # type: ignore
         units = PIP_UNITS[pair.split("_")[1]]

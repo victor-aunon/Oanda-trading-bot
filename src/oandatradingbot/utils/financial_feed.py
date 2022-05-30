@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 import yfinance as yf
 
 
@@ -44,6 +45,9 @@ class FinancialFeed:
             feed = feed.tz_localize('UTC')
         except Exception:
             print("Cannot determine feed timezone. Assuming UTC.")
+            if feed.shape[0] == 0:
+                time.sleep(1)
+                self.retrieve_feed()
             pass
         self.feed = feed
 

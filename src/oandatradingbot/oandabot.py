@@ -9,7 +9,7 @@ import btoandav20 as bto
 from btoandav20.sizers.oandav20sizer import OandaV20RiskPercentSizer
 
 # Local
-from oandatradingbot.strategies.macd_ema_atr import MACDEMAATR
+from oandatradingbot.strategies.macd_ema_atr import MACDEMAATRCreator
 from oandatradingbot.strategies.base_strategy import BaseStrategy
 
 
@@ -92,7 +92,8 @@ def main(config_obj=None, testing=False):
         )
     cerebro.broker = store.getbroker()  # Assign Oanda broker
 
-    cerebro.addstrategy(MACDEMAATR(BaseStrategy), **config)
+    strategy = MACDEMAATRCreator.creator(BaseStrategy)
+    cerebro.addstrategy(strategy, **config)
 
     # Sizes are going to be a percentage of the cash
     cerebro.addsizer(OandaV20RiskPercentSizer, percents=config["risk"] / 100)

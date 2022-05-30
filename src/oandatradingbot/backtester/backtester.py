@@ -10,11 +10,11 @@ import backtrader as bt
 import matplotlib.pyplot as plt
 
 # Locals
-from oandatradingbot.strategies.macd_ema_atr import MACDEMAATR
-from oandatradingbot.utils.financial_feed import FinancialFeed
-from oandatradingbot.utils.summarizer import Summarizer
+from oandatradingbot.backtester.summarizer import Summarizer
+from oandatradingbot.strategies.macd_ema_atr import MACDEMAATRCreator
 from oandatradingbot.strategies.base_backtest_strategy \
     import BaseBackTestStrategy
+from oandatradingbot.utils.financial_feed import FinancialFeed
 
 CRYPTOS = ["BTC", "BCH", "ETH", "LTC"]
 plt.rcParams["figure.figsize"] = (15, 10)
@@ -120,24 +120,17 @@ def main(config_obj=None, testing=False):
         # and SL and TK calculation are messed up
         cerebro.broker.set_coc(True)
 
-        cerebro.addsizer(bt.sizers.PercentSizer, percents=config["risk"])
-
         config["pairs"] = [pair]
-        cerebro.addstrategy(MACDEMAATR(BaseBackTestStrategy), **config)
+        strategy = MACDEMAATRCreator.creator(BaseBackTestStrategy)
+        cerebro.addstrategy(strategy, **config)
 
-        cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
-        cerebro.addanalyzer(
-            bt.analyzers.SharpeRatio,
-            timeframe=bt.TimeFrame.Weeks,
-            _name="sharperatio"
-        )
-        cerebro.addanalyzer(bt.analyzers.SQN, _name="sqn")
 
+        print("Running backtest...")
         results = cerebro.run()
 
         summarizer = Summarizer(
-            results[0], config, cerebro.broker.get_cash(), pair
+            results[0], config, pair
         )
 
         # Print and save summary in the results Excel file

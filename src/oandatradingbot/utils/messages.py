@@ -38,7 +38,7 @@ class Messages:
         return response
 
     def buy_order_placed(
-        self, size: int, pair: str, price: float, id=None
+        self, size: float, pair: str, price: float, id=None
     ) -> str:
         if self.lang == "ES-ES":
             response = (
@@ -137,7 +137,7 @@ class Messages:
         return response
 
     def sell_order_placed(
-        self, size: int, pair: str, price: float, id=None
+        self, size: float, pair: str, price: float, id=None
     ) -> str:
         if self.lang == "ES-ES":
             response = (

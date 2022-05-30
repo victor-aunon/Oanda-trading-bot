@@ -1,10 +1,13 @@
 # Libraries
 from datetime import datetime
 import os
+import sys
 from typing import Optional, Any
 
 # Packages
 import backtrader as bt
+import numpy as np
+import pandas as pd
 import xlsxwriter
 
 # Local
@@ -76,17 +79,22 @@ class BaseBackTestStrategy(bt.Strategy):
 
     def notify_order(self, order: bt.Order) -> None:
         pair = order.data._name
+        close = self.data[pair].close[0]
         if self.order_manager.buyed[pair]:
             response = self.order_manager.manage_buy_order(
                 order,
+                self.broker.get_cash() * self.config["risk"] / 100,
                 self.datetime_to_str(self.data[pair].datetime.datetime(0)),
+                close
             )
             if response != "" and self.config["debug"]:
                 self.log(response, self.data[pair].datetime.datetime(0))
-        elif self.order_manager.selled[pair]:
+        if self.order_manager.selled[pair]:
             response = self.order_manager.manage_sell_order(
                 order,
+                self.broker.get_cash() * self.config["risk"] / 100,
                 self.datetime_to_str(self.data[pair].datetime.datetime(0)),
+                close
             )
             if response != "" and self.config["debug"]:
                 self.log(response, self.data[pair].datetime.datetime(0))
@@ -119,12 +127,6 @@ class BaseBackTestStrategy(bt.Strategy):
                     s_l_pips = stop_loss * units
                     take_profit = self.get_take_profit(pair)
 
-                    # Calculate lot size
-                    size = self.getsizer().getsizing(
-                        self.data[pair],
-                        isbuy=True,
-                    )
-
                     # Calculate SL and TK
                     sl_price = close - stop_loss
                     tk_price = close + take_profit
@@ -145,7 +147,7 @@ class BaseBackTestStrategy(bt.Strategy):
                     # Create bracket order
                     self.buy_bracket(
                         data=self.data[pair],
-                        size=size,
+                        size=None,
                         exectype=bt.Order.Market,
                         valid=valid,
                         stopprice=sl_price,
@@ -163,12 +165,6 @@ class BaseBackTestStrategy(bt.Strategy):
                     stop_loss = self.get_stop_loss(pair)
                     s_l_pips = stop_loss * units
                     take_profit = self.get_take_profit(pair)
-
-                    # Calculate lot size
-                    size = self.getsizer().getsizing(
-                        self.data[pair],
-                        isbuy=False,
-                    )
 
                     # Calculate SL and TK
                     sl_price = close + stop_loss
@@ -190,7 +186,7 @@ class BaseBackTestStrategy(bt.Strategy):
                     # Create bracket order
                     self.sell_bracket(
                         data=self.data[pair],
-                        size=size,
+                        size=None,
                         exectype=bt.Order.Market,
                         valid=valid,
                         stopprice=sl_price,
@@ -201,10 +197,102 @@ class BaseBackTestStrategy(bt.Strategy):
                     self.order_manager.selled[pair] = True
 
     def stop(self):
-        # Skip the summary when optimizing
+        # Skip the trades summary when optimizing
         if self.optimize:
-            print(self.strat_name)
+            try:
+                os.mkdir(
+                    os.path.join(
+                        self.config["results_path"],
+                        self.config["opt_name"],
+                        "temp"
+                    )
+                )
+            except OSError as e:
+                if e.errno == 17:
+                    pass
+                else:
+                    print(e)
+                    sys.exit()
+            # Calculate total won, lost and profit
+            # (absolute and per instrument)
+            pl_dict = {
+                "Trades": 0,
+                "Won": 0,
+                "Lost": 0,
+                "Long": 0,
+                "Long won": 0,
+                "Long lost": 0,
+                "Short": 0,
+                "Short won": 0,
+                "Short lost": 0,
+                "Total profit": 0.,
+                "Total loss": 0.,
+            }
+            for pair in self.pairs:
+                if len(self.order_manager.trades[pair]) == 0:
+                    continue
+                pr_long = [
+                    tr["PL"] for tr in self.order_manager.trades[pair]
+                    if (tr["PL"] > 0) and (tr["Operation"] == "BUY")
+                ]
+                pr_short = [
+                    tr["PL"] for tr in self.order_manager.trades[pair]
+                    if (tr["PL"] > 0) and (tr["Operation"] == "SELL")
+                ]
+                lo_long = [
+                    tr["PL"] for tr in self.order_manager.trades[pair]
+                    if (tr["PL"] < 0) and (tr["Operation"] == "BUY")
+                ]
+                lo_short = [
+                    tr["PL"] for tr in self.order_manager.trades[pair]
+                    if (tr["PL"] < 0) and (tr["Operation"] == "SELL")
+                ]
+                pl_dict["Won"] += (len(pr_long) + len(pr_short))
+                pl_dict[f"Won {pair}"] = (len(pr_long) + len(pr_short))
+                pl_dict["Lost"] += (len(lo_long) + len(lo_short))
+                pl_dict[f"Lost {pair}"] = (len(lo_long) + len(lo_short))
+                pl_dict["Long"] += (len(pr_long) + len(lo_long))
+                pl_dict["Long won"] += len(pr_long)
+                pl_dict["Long lost"] += len(lo_long)
+                pl_dict["Short"] += (len(pr_short) + len(lo_short))
+                pl_dict["Short won"] += len(pr_short)
+                pl_dict["Short lost"] += len(lo_short)
+                pl_dict[f"Trades {pair}"] = pl_dict[f"Won {pair}"] \
+                    + pl_dict[f"Lost {pair}"]
+                pl_dict[f"Returns {pair}"] = (sum(pr_long) + sum(pr_short))
+                pl_dict[f"Returns {pair}"] += (sum(lo_long) + sum(lo_short))
+                pl_dict["Total profit"] += (sum(pr_long) + sum(pr_short))
+                pl_dict["Total loss"] -= (sum(lo_long) + sum(lo_short))
+            pl_dict["Trades"] = pl_dict["Won"] + pl_dict["Lost"]
+            r_multiples_neg = np.array([-1] * pl_dict["Lost"])  # type: ignore
+            r_multiples_pos = np.array(
+                [self.p.profit_risk_ratio] * pl_dict["Won"]  # type: ignore
+            )
+            r_multiples = np.concatenate(
+                (r_multiples_pos, r_multiples_neg), axis=None
+            )
+            pl_dict["SQN"] = np.mean(r_multiples) / np.std(r_multiples) \
+                * np.sqrt(r_multiples.size)
+            print(
+                f"{self.strat_name} --> Won: {pl_dict['Won']} - Lost: "
+                f"{pl_dict['Lost']} - Win rate: "
+                f"{(pl_dict['Won'] / (pl_dict['Won'] + pl_dict['Lost'])):.3f} "
+                f"- Returns: "
+                f"{(pl_dict['Total profit'] - pl_dict['Total loss']):.2f} "
+                f"{self.config['account_currency']}"
+            )
+            # Save a temporary summary file
+            df = pd.DataFrame([pl_dict])
+            df.to_csv(os.path.join(
+                    self.config["results_path"],
+                    self.config["opt_name"],
+                    "temp",
+                    f"{self.strat_name}.csv"
+                ), sep=";"
+            )
             return
+
+        # Not optimizing
         for pair in self.pairs:
             if len(self.order_manager.trades[pair]) == 0:
                 continue

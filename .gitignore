@@ -19,7 +19,7 @@ results
 
 # other files
 optimizer
-.coverage
+.coverage*
 api.py
 *.db
 set_env_vars*
