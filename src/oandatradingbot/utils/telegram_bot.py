@@ -95,7 +95,7 @@ class TelegramBot:
     def _format_weekly_report(self) -> str:
         now = datetime.utcnow()
         saturday = datetime(now.year, now.month, now.day, 23, 59, 59) \
-        + timedelta(days=1)
+            + timedelta(days=1)
         monday = saturday - timedelta(days=6)
 
         trades = self.session.query(Trade).filter(
