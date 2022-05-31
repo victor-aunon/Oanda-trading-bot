@@ -94,12 +94,13 @@ class TelegramBot:
 
     def _format_weekly_report(self) -> str:
         now = datetime.utcnow()
-        today = datetime(now.year, now.month, now.day + 1, 23, 59, 59)
-        monday = today - timedelta(days=6)
+        saturday = datetime(now.year, now.month, now.day, 23, 59, 59) \
+        + timedelta(days=1)
+        monday = saturday - timedelta(days=6)
 
         trades = self.session.query(Trade).filter(
             Trade.exit_time >= monday,
-            Trade.exit_time <= today
+            Trade.exit_time <= saturday
         ).all()
 
         if len(trades) == 0:
@@ -127,7 +128,7 @@ class TelegramBot:
             if self.currency in currency_emoji else "💵"
 
         msg = (
-            f"📅 <b>Trades week {monday.date()} - {today.date()}</b>\n\n"
+            f"📅 <b>Trades week {monday.date()} - {saturday.date()}</b>\n\n"
             f"{trades_summary}"
             f"\n🎯 Wins: {wins}, Losses: {losses}, WR: {win_ratio}\n"
             f"{curr_emoji} <b>Total profit: {total_pl} {self.currency}</b>"
