@@ -9,12 +9,12 @@
     "interval": "5m",
     "language": "EN-US",
     "strategy_params": {
-        "macd_fast_ema": 12,
-        "macd_slow_ema": 26,
-        "macd_signal_ema": 9,
-        "ema_period": 200,
+        "macd_fast_ema": 8,
+        "macd_slow_ema": 15,
+        "macd_signal_ema": 5,
+        "ema_period": 120,
         "atr_period": 14,
-        "atr_distance": 1.2,
-        "profit_risk_ratio": 1.5
+        "atr_distance": 3.0,
+        "profit_risk_ratio": 1.0
     }
 }

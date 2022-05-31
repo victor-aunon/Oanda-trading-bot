@@ -1,0 +1,20 @@
+{
+    "results_path": "the path where results will be saved",
+    "pairs": ["EUR_USD", "EUR_GBP", "EUR_NZD"],
+    "cash": 10000,
+    "risk": 1,
+    "account_currency": "EUR",
+    "language": "ES-ES",
+    "timeframe_num": 5,
+    "timeframe": "Minutes",
+    "interval": "5m",
+    "strategy_params": {
+        "macd_fast_ema": {"start": 5, "end": 16, "step": 3},
+        "macd_slow_ema": 25,
+        "macd_signal_ema": 12,
+        "ema_period": 200,
+        "atr_period": 14,
+        "atr_distance": 1.1,
+        "profit_risk_ratio": 1.5
+    }
+}

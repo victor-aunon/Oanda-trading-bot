@@ -12,6 +12,8 @@ from btoandav20.sizers.oandav20sizer import OandaV20RiskPercentSizer
 from oandatradingbot.strategies.macd_ema_atr import MACDEMAATRCreator
 from oandatradingbot.strategies.base_strategy import BaseStrategy
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 def parse_args(pargs=None):
     parser = argparse.ArgumentParser(
@@ -20,8 +22,6 @@ def parse_args(pargs=None):
             'Oanda trading bot'
         )
     )
-
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     parser.add_argument(
         '--config-file',
@@ -52,8 +52,6 @@ def main(config_obj=None, testing=False):
             config = json.load(file)
     else:
         config = config_obj
-
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     if "database_uri" not in config:
         config["database_uri"] = \

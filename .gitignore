@@ -15,10 +15,8 @@ results
 # config files
 *dev.json
 *prod.json
-*optimize.json
 
 # other files
-optimizer
 .coverage*
 api.py
 *.db

@@ -10,6 +10,8 @@
      - [The configuration file (live trading)](#the-configuration-file-live-trading)
  - [Backtesting](#backtesting)
      - [The configuration file (backtesting)](#the-configuration-file-backtesting)
+ - [Optimizing](#optimizing)
+     - [The configuration file (optimizing)](#the-configuration-file-optimizing)
  - [Testing](#testing)
 
 ---
@@ -137,6 +139,47 @@ In the **`results_path`** you will find two files:
     - *Trades*: This sheet contains a list of all the trades executed during the backtest.
     - *Summary*: This sheet contains a summary of the backtest strategy with the values also printed to the console at the end of the backtest.
  - A **.png** file with different subplots of the strategy: Cash, value, trades, the instrument candlechart and the indicators charts.
+
+## Optimizing
+
+**_Note: You DO NOT need an OANDA account to optimize your strategy_**
+
+### **The configuration file (optimizing)**
+
+A sample of the configuration file can be found in `src/oandatradingbot/config_optimize.json` which contains the following keys:
+
+ - **`results_path`**: An array representing the path where backtesting results will be saved.
+ - **`pairs`**: An array of the pair currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
+ - **`cash`**: A float value indicating the starting cash.
+ - **`risk`**: A float value indicating the cash percentage to be risked per trade (`1.0` = 1%).
+ - **`account_currency`**: The currency of your OANDA account, e.g. `"EUR"` for euros.
+ - **`timeframe`**: A string representing the timeframe to trade the market e.g. `"Minutes"`. Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+ - **`timeframe_num`**: The timeframe to trade the market. For example, if you selected `"Minutes"`, then this value can be 1, 5, 10 ... Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+ - **`interval`**: A string representing the timeframe interval in a valid **yfinance** format. It must represent the same timeframe as `timeframe` and `timeframe_num`. So if these fields were `"Minutes"` and `5`, **`interval`** would be `"5m"`. Valid intervals are `1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo`.
+ - **`strategy_params`**: A JSON object representing the main parameters of the trading strategy:
+     - **`macd_fast_ema`**: the period of the MACD fast EMA. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.
+     - **`macd_slow_ema`**: the period of the MACD slow EMA. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.
+     - **`macd_signal_ema`**: the period of the MACD signal EMA. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.
+     - **`ema_period`**: the period of the long period ema. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.
+     - **`atr_period`**: the period of the average true range. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.
+     - **`atr_distance`**: a multiplier of the average true range to set the stop loss price. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.
+     - **`profit_risk_ratio`**: a multipier of the stop loss to set the take profit price. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.
+
+You can run the optimizer directly from the command line with `python -m oandatradingbot.optimizer` using the following argument:
+
+- **`--config-file`**: followed by the JSON configuration file. If omitted, the bot will use the file in `/src/oandatradingbot/config_optimize.json`.
+
+By default, the optimizer will backtest all the different parameter combinations using multiprocessing. So if the computer CPU has eight cores, eight combinations are backtested in parallel.
+
+In the **`results_path`** you will find a folder named `Optimization_YYYY-MM-DD_HH-mm` containing:
+ - A **.xlsx** file with a summary of the main results for each parameters combination: trades, won, lost, win rate, trades per instrument, etc.
+ - Different **.png** charts showing results for the best **30 (max) combinations** sorted by the SQN ([System Quality Number](https://tradingtact.com/system-quality-number/)) indicator:
+    - A chart showing the cumulative returns per instrument, as a percentage with respect to the initial cash.
+    - A chart showing the win rate (trades won / total trades) per instrument in percentage.
+    - A chart showing the number of total trades per instrument.
+ - Two **.png** charts for each strategy parameter:
+    - One showing a distribution of the win rate for each value of the parameter during the optimization.
+    - Another on showing a distribution of the number of trades for each value of the parameter during the optimization.
 
 ## Testing
 
