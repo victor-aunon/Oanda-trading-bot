@@ -74,6 +74,11 @@ def main(config_obj=None, testing=False):
         notif_transactions=True
     )
 
+    # Transform config dictionary
+    for param in config["strategy_params"]:
+        config[param] = config["strategy_params"][param]
+    config.pop("strategy_params", None)
+
     for pair in config["pairs"]:
         data = store.getdata(
             dataname=pair,

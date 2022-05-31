@@ -37,6 +37,7 @@ class MACDEMAATRCreator:
                     f"-{self.config['interval']}" if "interval"
                     in self.config else ""
                 )
+                print(f"Strategy: {self.strat_name}")
 
             def initialize_dicts(self):
                 # Dictionaries whose keys are the fx pairs
