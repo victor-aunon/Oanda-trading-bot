@@ -94,6 +94,10 @@ def main(config_obj=None):
             )
             print(f"    {param}: {config[param]}")
             variations.append(len(config[param]))
+        elif isinstance(param_dict, list):
+            config[param] = param_dict
+            print(f"    {param}: {config[param]}")
+            variations.append(len(config[param]))
         else:
             config[param] = param_dict
             print(f"    {param}: {config[param]}")
@@ -103,7 +107,8 @@ def main(config_obj=None):
 
     cerebro = bt.Cerebro(stdstats=False, optreturn=True)
 
-    for pair in list(config["pairs"]):  # type: ignore
+    config["pairs"] = list(set(config["pairs"]))
+    for pair in config["pairs"]:  # type: ignore
         market = "fx" if pair.split("_")[0] not in CRYPTOS else "crypto"
         print(f"Downloading {pair} feed...")
         feed = FinancialFeed(pair, market, config['interval']).get_feed()
