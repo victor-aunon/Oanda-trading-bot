@@ -230,10 +230,11 @@ class BaseStrategy(bt.Strategy):
                         pips=s_l_pips / self.broker.o.get_leverage()
                     )
 
-                    # Get the current ask price and calculate SL and TK
+                    # Get the current ask price and calculate SL and TK 
                     ask_price = self.instrument_manager.get_ask_price(pair)
-                    sl_price = ask_price - stop_loss
-                    tk_price = ask_price + take_profit
+                    diff = ask_price - close
+                    sl_price = ask_price - diff - stop_loss
+                    tk_price = ask_price - diff + take_profit
 
                     if self.config["debug"]:
                         self.log(
@@ -287,8 +288,9 @@ class BaseStrategy(bt.Strategy):
 
                     # Get the current bid price and calculate SL and TK
                     bid_price = self.instrument_manager.get_bid_price(pair)
-                    sl_price = bid_price + stop_loss
-                    tk_price = bid_price - take_profit
+                    diff = close - bid_price
+                    sl_price = bid_price + diff + stop_loss
+                    tk_price = bid_price + diff - take_profit
 
                     if self.config["debug"]:
                         self.log(
