@@ -62,6 +62,16 @@ def create_session():
     return Session(bind=engine)
 
 
+def test_recover_orders():
+    messages = Messages("EN-US", "EUR")
+    tts = TTS("EN-US")
+    session = create_session()
+    im = InstrumentManager(config)
+    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+
+    assert om.recover_orders() is None
+
+
 def test_buy_order_rejected():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")

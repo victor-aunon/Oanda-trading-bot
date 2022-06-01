@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any, List, Dict, Optional
 
 # Packages
+import requests
 from sqlalchemy import Boolean
 from sqlalchemy.orm import Session
 
@@ -19,7 +20,6 @@ REJECTED_REASONS = [
     "TAKE_PROFIT_ON_FILL_LOSS",
     "INSUFFICIENT_LIQUIDITY"
 ]
-
 CANCEL_REASONS = ["MARKET_ORDER_POSITION_CLOSEOUT", "MARKET_ORDER_TRADE_CLOSE"]
 
 
@@ -51,12 +51,98 @@ class OrderManager:
             self.sell_order[pair] = {
                 "MK": None, "SL": None, "TK": None, "CANCEL": None
             }
+        # Check for pending orders
+        self.recover_orders()
 
     def has_buyed(self, pair: str) -> Boolean:
         return self.buyed[pair]
 
     def has_selled(self, pair: str) -> Boolean:
         return self.selled[pair]
+
+    def recover_orders(self) -> None:
+        url = self.instrument_manager.url
+        account_id = self.instrument_manager.account_id
+        token = self.instrument_manager.token
+
+        response = requests.get(
+            f"{url}/v3/accounts/{account_id}/pendingOrders",
+            headers={
+                "content-type": "application/json",
+                "Authorization": f"Bearer {token}"
+            },
+        )
+        orders = response.json()["orders"]
+
+        if len(orders) == 0:
+            self.pending_orders_check = True
+            print("There is no pending trades")
+
+        for order in orders:
+            # Get main market order
+            main_order = self._get_order(order["tradeID"])
+            if main_order["reason"] == "MARKET_ORDER" \
+                and main_order["type"] == "ORDER_FILL" \
+                    and main_order["id"] not in self.trade_dict:
+
+                pair = main_order["instrument"]
+                # Register buy order
+                if float(main_order["units"]) > 0:
+                    self.trade_dict[main_order["id"]] = {
+                        "pair": pair, "op_type": "BUY"
+                    }
+                    if pair not in self.buy_order:
+                        self.buy_order[pair] = {}
+                    self.buy_order[pair]["MK"] = main_order  # type: ignore
+                    self.buyed[pair] = True
+                    print(f"BUY order {pair} recovered")
+                else:
+                    self.trade_dict[main_order["id"]] = {
+                        "pair": pair, "op_type": "SELL"
+                    }
+                    if pair not in self.sell_order:
+                        self.sell_order[pair] = {}
+                    self.sell_order[pair]["MK"] = main_order  # type: ignore
+                    self.selled[pair] = True
+                    print(f"SELL order {pair} recovered")
+
+            # Register stop loss
+            full_order = self._get_order(order["id"])
+            if full_order["type"] == "STOP_LOSS_ORDER" \
+                and full_order["reason"] == "ON_FILL" \
+                    and full_order["tradeID"] == main_order["id"]:
+                pair = self.trade_dict[full_order["tradeID"]]["pair"]
+                op_type = self.trade_dict[full_order["tradeID"]]["op_type"]
+                if op_type == "BUY":
+                    self.buy_order[pair]["SL"] = full_order  # type: ignore
+                elif op_type == "SELL":
+                    self.sell_order[pair]["SL"] = full_order  # type: ignore
+
+            # Register take profit
+            full_order = self._get_order(order["id"])
+            if full_order["type"] == "TAKE_PROFIT_ORDER" \
+                and full_order["reason"] == "ON_FILL" \
+                    and full_order["tradeID"] == main_order["id"]:
+                pair = self.trade_dict[full_order["tradeID"]]["pair"]
+                op_type = self.trade_dict[full_order["tradeID"]]["op_type"]
+                if op_type == "BUY":
+                    self.buy_order[pair]["TK"] = full_order  # type: ignore
+                elif op_type == "SELL":
+                    self.sell_order[pair]["TK"] = full_order  # type: ignore
+
+    def _get_order(self, id: int) -> Any:
+        url = self.instrument_manager.url
+        account_id = self.instrument_manager.account_id
+        token = self.instrument_manager.token
+
+        response = requests.get(
+            f"{url}/v3/accounts/{account_id}/transactions/{id}",
+            headers={
+                "content-type": "application/json",
+                "Authorization": f"Bearer {token}"
+            }
+        )
+        return response.json()["transaction"]
 
     def manage_transaction(self, transaction: Dict[str, Any]) -> str:
         # Submit market order
