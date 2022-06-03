@@ -14,6 +14,7 @@
     "telegram_report_hour": 22,
     "language": "EN-US",
     "tts": true,
+    "language_tts": "EN-US",
     "strategy_params": {
         "macd_fast_ema": 12,
         "macd_slow_ema": 26,

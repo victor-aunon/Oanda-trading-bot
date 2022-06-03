@@ -99,6 +99,7 @@ config = {
     "account_currency": "EUR",
     "language": "EN-US",
     "tts": True,
+    "language_tts": "EN-US",
     "telegram_token": os.environ["telegram_token"],
     "telegram_chat_id": os.environ["telegram_chat_id"],
     "strategy_params": {

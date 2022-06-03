@@ -33,7 +33,7 @@ class BaseStrategy(bt.Strategy):
             self.config["language"], kwargs["account_currency"]
         )
         if kwargs["tts"]:
-            self.tts = TTS(self.config["language"], 120)
+            self.tts = TTS(self.config["language_tts"], 120)
         engine = create_engine(kwargs["database_uri"])
         Base.metadata.create_all(engine)
         self.db_session = Session(bind=engine)
