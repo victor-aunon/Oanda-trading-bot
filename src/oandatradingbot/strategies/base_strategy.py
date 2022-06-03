@@ -167,7 +167,7 @@ class BaseStrategy(bt.Strategy):
                 return
             if response.status_code == 200:
                 self.telegram_bot.daily_notification = False
-                self.log("Daily report sent to Telegram")
+                self.log("Daily report sent via Telegram")
         # Send weekly notification
         if self.telegram_bot.weekly_notification \
             and now.hour == notify_hour \
@@ -177,7 +177,7 @@ class BaseStrategy(bt.Strategy):
                 return
             if response.status_code == 200:
                 self.telegram_bot.weekly_notification = False
-                self.log("Weekly report sent to Telegram")
+                self.log("Weekly report sent via Telegram")
 
     def next(self) -> None:
         # Iterate over each currency pair since data is a list of feeds named

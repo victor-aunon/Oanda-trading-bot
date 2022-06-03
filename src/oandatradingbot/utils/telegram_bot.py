@@ -87,8 +87,8 @@ class TelegramBot:
         msg = (
             f"📰 <b>Trades {datetime.utcnow().date()}</b>\n\n"
             f"{trades_summary}"
-            f"\n🎯Wins: {wins}, Losses: {losses}, WR: {win_ratio}\n"
-            f"{curr_emoji} <b>Total profit: {total_pl} {self.currency}</b>"
+            f"\n🎯Wins: {wins}, Losses: {losses}, WR: {win_ratio:.3f}\n"
+            f"{curr_emoji} <b>Total profit: {total_pl:.2f} {self.currency}</b>"
         )
         return msg
 
@@ -130,8 +130,8 @@ class TelegramBot:
         msg = (
             f"📅 <b>Trades week {monday.date()} - {saturday.date()}</b>\n\n"
             f"{trades_summary}"
-            f"\n🎯 Wins: {wins}, Losses: {losses}, WR: {win_ratio}\n"
-            f"{curr_emoji} <b>Total profit: {total_pl} {self.currency}</b>"
+            f"\n🎯 Wins: {wins}, Losses: {losses}, WR: {win_ratio:.3f}\n"
+            f"{curr_emoji} <b>Total profit: {total_pl:.2f} {self.currency}</b>"
         )
         return msg
 
