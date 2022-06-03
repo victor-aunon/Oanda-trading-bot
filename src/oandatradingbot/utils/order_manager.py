@@ -1,5 +1,6 @@
 # Libraries
 from datetime import datetime
+import re
 from typing import Any, List, Dict, Optional
 
 # Packages
@@ -64,6 +65,7 @@ class OrderManager:
         url = self.instrument_manager.url
         account_id = self.instrument_manager.account_id
         token = self.instrument_manager.token
+        time_pattern = r"\d{4}-\d{2}-\d{2}[T]\d{2}:\d{2}:\d{2}[.]\d{6}"
 
         response = requests.get(
             f"{url}/v3/accounts/{account_id}/pendingOrders",
@@ -81,6 +83,12 @@ class OrderManager:
         for order in orders:
             # Get main market order
             main_order = self._get_order(order["tradeID"])
+            entry_time = re.match(  # type: ignore
+                time_pattern, main_order["time"]
+            ).group()
+            main_order["time"] = datetime.strptime(
+                entry_time, "%Y-%m-%dT%H:%M:%S.%f"
+            ).timestamp()
             if main_order["reason"] == "MARKET_ORDER" \
                 and main_order["type"] == "ORDER_FILL" \
                     and main_order["id"] not in self.trade_dict:
