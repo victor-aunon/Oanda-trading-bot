@@ -150,13 +150,13 @@ class BaseStrategy(bt.Strategy):
         now = datetime.now()
         notify_hour = now.hour if self.testing \
             else self.telegram_bot.report_hour
-        notify_week_day = now.day if self.testing else 4
+        notify_week_day = now.weekday() if self.testing else 4
 
         # Reset daily notification
         if now.hour == 0:
             self.telegram_bot.daily_notification = True
         # Reset weekly notification
-        if now.hour == 0 and now.day == 4:
+        if now.hour == 0 and now.weekday() == 4:
             self.telegram_bot.weekly_notification = True
 
         # Send daily notification
@@ -171,7 +171,7 @@ class BaseStrategy(bt.Strategy):
         # Send weekly notification
         if self.telegram_bot.weekly_notification \
             and now.hour == notify_hour \
-                and now.day == notify_week_day:  # Weekly report on Friday
+                and now.weekday() == notify_week_day:  # Weekly rep. on Friday
             response = self.telegram_bot.weekly_report()
             if response is None:
                 return
@@ -193,10 +193,6 @@ class BaseStrategy(bt.Strategy):
             text = f"{pair} - {close}"
             if self.config["debug"]:
                 self.log(text)
-
-            # Check if today is Friday to close the order at the
-            # end of the session
-            # valid = bt.Order.DAY if timestamp.weekday() == 4 else None
 
             # Manage daily and weekly Telegram notifications
             self.manage_telegram_notifications()
@@ -255,7 +251,6 @@ class BaseStrategy(bt.Strategy):
                         data=self.data[pair],
                         size=size,
                         exectype=bt.Order.Market,
-                        valid=0,
                         stopprice=sl_price,
                         stopexec=bt.Order.Stop,
                         limitprice=tk_price,
@@ -311,9 +306,16 @@ class BaseStrategy(bt.Strategy):
                         data=self.data[pair],
                         size=size,
                         exectype=bt.Order.Market,
-                        valid=0,
                         stopprice=sl_price,
                         stopexec=bt.Order.Stop,
                         limitprice=tk_price,
                         limitexec=bt.Order.Limit,
                     )
+
+        # Check if today is Friday to close pending trades at the
+        # end of the session
+        now = datetime.utcnow()
+        print(now.hour)
+        if now.weekday() == 4 and now.hour == 22 \
+                and now.minute == 60 - self.config["timeframe_num"]:
+            self.order_manager.cancel_pending_trades()

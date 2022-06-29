@@ -78,7 +78,7 @@ class OrderManager:
 
         if len(orders) == 0:
             self.pending_orders_check = True
-            print("There is no pending trades")
+            print("There is no pending orders")
 
         for order in orders:
             # Get main market order
@@ -137,6 +137,37 @@ class OrderManager:
                     self.buy_order[pair]["TK"] = full_order  # type: ignore
                 elif op_type == "SELL":
                     self.sell_order[pair]["TK"] = full_order  # type: ignore
+
+    def cancel_pending_trades(self) -> None:
+        url = self.instrument_manager.url
+        account_id = self.instrument_manager.account_id
+        token = self.instrument_manager.token
+
+        response = requests.get(
+            f"{url}/v3/accounts/{account_id}/trades",
+            headers={
+                "content-type": "application/json",
+                "Authorization": f"Bearer {token}"
+            },
+        )
+        trades = response.json()["trades"]
+
+        if len(trades) == 0:
+            print("There is no pending trades")
+            return
+
+        for trade in trades:
+            trade_id = trade["id"]
+            instrument = trade["instrument"]
+            response = requests.put(
+                f"{url}/v3/accounts/{account_id}/trades/{trade_id}/close",
+                headers={
+                    "content-type": "application/json",
+                    "Authorization": f"Bearer {token}"
+                },
+            )
+            if response.status_code == 200:
+                print(f"Closing trade {instrument} with id {trade_id}")
 
     def _get_order(self, id: int) -> Any:
         url = self.instrument_manager.url
