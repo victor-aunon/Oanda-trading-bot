@@ -60,10 +60,16 @@ class Summarizer:
             }
 
             for inst in self.instruments:
-                res[f"Trades {inst}"] = df_strat[f"Trades {inst}"][0]
-                res[f"Won {inst}"] = df_strat[f"Won {inst}"][0]
-                res[f"Lost {inst}"] = df_strat[f"Lost {inst}"][0]
-                res[f"Returns {inst}"] = df_strat[f"Returns {inst}"][0]
+                try:
+                    res[f"Trades {inst}"] = df_strat[f"Trades {inst}"][0]
+                    res[f"Won {inst}"] = df_strat[f"Won {inst}"][0]
+                    res[f"Lost {inst}"] = df_strat[f"Lost {inst}"][0]
+                    res[f"Returns {inst}"] = df_strat[f"Returns {inst}"][0]
+                except KeyError:
+                    res[f"Trades {inst}"] = 0.0
+                    res[f"Won {inst}"] = 0.0
+                    res[f"Lost {inst}"] = 0
+                    res[f"Returns {inst}"] = 0.0
 
             results_list.append(res)
 
