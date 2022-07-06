@@ -199,8 +199,17 @@ class BaseStrategy(bt.Strategy):
 
             # Stop the execution when running a test
             if self.testing:
+                self.order_manager.cancel_pending_trades()
                 self.db_session.close()
                 raise bt.StrategySkipError
+
+            # Check if today is Friday to close pending trades at the
+            # end of the session
+            now = datetime.utcnow()
+            if now.weekday() == 4 and now.hour == 22 \
+                    and now.minute == 60 - self.config["timeframe_num"]:
+                self.order_manager.cancel_pending_trades()
+                return
 
             # Check if a buy order could be opened
             if not self.order_manager.has_buyed(pair):
@@ -311,11 +320,3 @@ class BaseStrategy(bt.Strategy):
                         limitprice=tk_price,
                         limitexec=bt.Order.Limit,
                     )
-
-        # Check if today is Friday to close pending trades at the
-        # end of the session
-        now = datetime.utcnow()
-        print(now.hour)
-        if now.weekday() == 4 and now.hour == 22 \
-                and now.minute == 60 - self.config["timeframe_num"]:
-            self.order_manager.cancel_pending_trades()
