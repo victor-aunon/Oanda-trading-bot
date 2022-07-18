@@ -206,7 +206,7 @@ class BaseStrategy(bt.Strategy):
             # Check if today is Friday to close pending trades at the
             # end of the session
             now = datetime.utcnow()
-            if now.weekday() == 4 and now.hour == 22 \
+            if now.weekday() == 4 and now.hour == 20 \
                     and now.minute == 60 - self.config["timeframe_num"]:
                 self.order_manager.cancel_pending_trades()
                 return
