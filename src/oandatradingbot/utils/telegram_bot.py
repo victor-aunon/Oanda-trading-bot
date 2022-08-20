@@ -79,7 +79,7 @@ class TelegramBot:
         for trade in trades:
             trades_summary += (
                 f"•{trade.pair} -> {trade.operation}: "
-                f"<b>{trade.profit} {self.currency}</b>\n"
+                f"<b>{trade.profit:.2f} {self.currency}</b>\n"
             )
         curr_emoji = currency_emoji[self.currency] \
             if self.currency in currency_emoji else "💵"
@@ -122,7 +122,7 @@ class TelegramBot:
         for key, val in pair_dict.items():
             trades_summary += (
                 f"•{key} -> {val['Trades']} trades, "
-                f"profit: <b>{val['Profit']}</b>\n"
+                f"profit: <b>{val['Profit']:.2f}</b>\n"
             )
         curr_emoji = currency_emoji[self.currency] \
             if self.currency in currency_emoji else "💵"

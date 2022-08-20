@@ -3,7 +3,7 @@
 .vscode
 
 # python folders
-virtualenv
+virtualenv*
 src/oandatradingbot.egg-info
 .mypy_cache
 .pytest_cache
