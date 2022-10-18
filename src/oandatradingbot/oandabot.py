@@ -9,8 +9,8 @@ import btoandav20 as bto
 from btoandav20.sizers.oandav20sizer import OandaV20RiskPercentSizer
 
 # Local
-from oandatradingbot.strategies.macd_ema_atr import MACDEMAATRCreator
-from oandatradingbot.strategies.base_strategy import BaseStrategy
+from oandatradingbot.strategies.macd_ema_atr_live import MacdEmaAtrLive
+from oandatradingbot.types.config import ConfigType
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -49,7 +49,7 @@ def main(config_obj=None, testing=False):
     if config_obj is None:
         # Load config json file
         with open(args.config_file, "r") as file:
-            config = json.load(file)
+            config: ConfigType = json.load(file)
     else:
         config = config_obj
 
@@ -95,9 +95,11 @@ def main(config_obj=None, testing=False):
         )
     cerebro.broker = store.getbroker()  # Assign Oanda broker
 
-    strategy = MACDEMAATRCreator.creator(BaseStrategy)
-    cerebro.addstrategy(strategy, **config)
+    cerebro.addstrategy(MacdEmaAtrLive, **config)
 
     # Sizes are going to be a percentage of the cash
     cerebro.addsizer(OandaV20RiskPercentSizer, percents=config["risk"] / 100)
+
+    # Add a timer to notify on Fridays before session ends
+    # cerebro.add_timer()
     cerebro.run()

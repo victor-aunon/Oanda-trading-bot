@@ -5,15 +5,17 @@ import json
 from multiprocessing import cpu_count
 import os
 import sys
+from typing import List
 
 # Packages
 import backtrader as bt
 import numpy as np
 
 # Locals
-from oandatradingbot.strategies.macd_ema_atr import MACDEMAATRBT
+from oandatradingbot.strategies.macd_ema_atr_backtest import MacdEmaAtrBackTest
 from oandatradingbot.utils.financial_feed import FinancialFeed
 from oandatradingbot.optimizer.summarizer_opt import Summarizer
+from oandatradingbot.types.config import ConfigType
 
 CRYPTOS = ["BTC", "BCH", "ETH", "LTC"]
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,21 +24,19 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 def parse_args(pargs=None):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description=(
-            'Backtester based on Yahoo finance instrument feed'
-        )
+        description=("Backtester based on Yahoo finance instrument feed"),
     )
 
     parser.add_argument(
-        '--config-file',
+        "--config-file",
         default=os.path.join(current_dir, "..", "config_optimize.json"),
-        required=False, help="Configuration json file required to run the bot")
+        required=False,
+        help="Configuration json file required to run the bot",
+    )
 
-    parser.add_argument(
-        '--basetemp',
-        required=False, help=argparse.SUPPRESS)
+    parser.add_argument("--basetemp", required=False, help=argparse.SUPPRESS)
 
-    parser.add_argument('args', nargs=argparse.REMAINDER)
+    parser.add_argument("args", nargs=argparse.REMAINDER)
 
     return parser.parse_args(pargs)
 
@@ -48,7 +48,7 @@ def main(config_obj=None):
     if config_obj is None:
         # Load config json file
         with open(args.config_file, "r") as file:
-            config = json.load(file)
+            config: ConfigType = json.load(file)
     else:
         config = config_obj
 
@@ -60,8 +60,8 @@ def main(config_obj=None):
         sys.exit()
 
     # Create results folder
-    opt_name = (
-        f"Optimization_"
+    opt_name: str = (
+        "Optimization_"
         f"{datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')}"
     )
 
@@ -84,10 +84,12 @@ def main(config_obj=None):
             sys.exit()
 
     # Create ranges from strategy parameters
-    variations = []
+    variations: List[int] = []
     print("Parameters values:")
     for param in config["strategy_params"]:
-        param_dict = config["strategy_params"][param]
+        param_dict = config[
+            "strategy_params"
+        ][param]
         if isinstance(param_dict, dict):
             config[param] = np.arange(
                 param_dict["start"], param_dict["end"], param_dict["step"]
@@ -111,13 +113,14 @@ def main(config_obj=None):
     for pair in config["pairs"]:  # type: ignore
         market = "fx" if pair.split("_")[0] not in CRYPTOS else "crypto"
         print(f"Downloading {pair} feed...")
-        feed = FinancialFeed(pair, market, config['interval']).get_feed()
+        feed = FinancialFeed(pair, market, config["interval"]).get_feed()
         data = bt.feeds.PandasData(dataname=feed, name=pair)
 
         cerebro.resampledata(
-            data, name=pair,
+            data,
+            name=pair,
             timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
-            compression=config['timeframe_num']
+            compression=config["timeframe_num"],
         )
 
     cerebro.broker = bt.brokers.BackBroker(cash=config["cash"])
@@ -125,8 +128,8 @@ def main(config_obj=None):
     # and SL and TK calculation are messed up
     cerebro.broker.set_coc(True)
 
-    config["pairs"] = [config["pairs"]]
-    cerebro.optstrategy(MACDEMAATRBT, **config)
+    config["pairs"] = [config["pairs"]]  # type: ignore
+    cerebro.optstrategy(MacdEmaAtrBackTest, **config)
 
     print("Running backtests...")
     cerebro.run()

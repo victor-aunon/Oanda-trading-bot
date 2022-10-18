@@ -8,13 +8,13 @@ import sys
 # Packages
 import backtrader as bt
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 # Locals
 from oandatradingbot.backtester.summarizer import Summarizer
-from oandatradingbot.strategies.macd_ema_atr import MACDEMAATRCreator
-from oandatradingbot.strategies.base_backtest_strategy \
-    import BaseBackTestStrategy
+from oandatradingbot.strategies.macd_ema_atr_backtest import MacdEmaAtrBackTest
 from oandatradingbot.utils.financial_feed import FinancialFeed
+from oandatradingbot.types.config import ConfigType
 
 CRYPTOS = ["BTC", "BCH", "ETH", "LTC"]
 plt.rcParams["figure.figsize"] = (15, 10)
@@ -76,7 +76,7 @@ def main(config_obj=None, testing=False):
     if config_obj is None:
         # Load config json file
         with open(args.config_file, "r") as file:
-            config = json.load(file)
+            config: ConfigType = json.load(file)
     else:
         config = config_obj
 
@@ -121,8 +121,7 @@ def main(config_obj=None, testing=False):
         cerebro.broker.set_coc(True)
 
         config["pairs"] = [pair]
-        strategy = MACDEMAATRCreator.creator(BaseBackTestStrategy)
-        cerebro.addstrategy(strategy, **config)
+        cerebro.addstrategy(MacdEmaAtrBackTest, **config)
 
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
 
@@ -139,7 +138,7 @@ def main(config_obj=None, testing=False):
 
         # Only show the figure if not running a test
         if testing:
-            figure = saveplots(
+            figure: Figure = saveplots(
                 cerebro, style="candle", barup="green", bardown="red"
             )[0]
         else:

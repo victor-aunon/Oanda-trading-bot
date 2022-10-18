@@ -9,11 +9,13 @@ import pylab as plt
 import warnings
 import xlsxwriter
 
+from oandatradingbot.types.config import ConfigType
+
 warnings.filterwarnings("ignore")
 
 
 class Summarizer:
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: ConfigType) -> None:
         self.strat_files = []
         self.instruments = config["pairs"][0]
         self.results_path = config["results_path"]

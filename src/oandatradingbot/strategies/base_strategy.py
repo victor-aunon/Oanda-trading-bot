@@ -2,7 +2,7 @@
 import ast
 from datetime import datetime
 from pprint import pprint
-from typing import Any, Optional
+from typing import List, Optional, Union
 
 # Packages
 import backtrader as bt
@@ -10,6 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 # Local
+from oandatradingbot.types.config import ConfigType
 from oandatradingbot.dbmodels.trade import Base
 from oandatradingbot.utils.instrument_manager import InstrumentManager
 from oandatradingbot.utils.messages import Messages
@@ -19,15 +20,14 @@ from oandatradingbot.utils.tts import TTS
 
 
 class BaseStrategy(bt.Strategy):
-
     def __init__(self, **kwargs) -> None:
         super().__init__()
-        self.config = kwargs
+        self.config: ConfigType = kwargs
         self.check_config()
-        self.pairs = kwargs["pairs"]
-        self.account_type = kwargs["account_type"]
-        self.account_currency = kwargs["account_currency"]
-        self.testing = kwargs["testing"]
+        self.pairs: List[str] = kwargs["pairs"]
+        self.account_type: str = kwargs["account_type"]
+        self.account_currency: str = kwargs["account_currency"]
+        self.testing: bool = kwargs["testing"]
         # Attributes that do not require dictionaries
         self.messages = Messages(
             self.config["language"], kwargs["account_currency"]
@@ -45,9 +45,11 @@ class BaseStrategy(bt.Strategy):
                 self.db_session,
                 self.account_currency,
                 kwargs["telegram_report_frequency"]
-                if "telegram_report_frequency" in kwargs else "Daily",
+                if "telegram_report_frequency" in kwargs
+                else "Daily",
                 kwargs["telegram_report_hour"]
-                if "telegram_report_hour" in kwargs else 22
+                if "telegram_report_hour" in kwargs
+                else 22,
             )
             self.check_telegram_bot()
         self.order_manager = OrderManager(
@@ -61,18 +63,24 @@ class BaseStrategy(bt.Strategy):
         )
         self.initialize_dicts()
 
+    @staticmethod
+    def datetime_to_str(timestamp: datetime) -> str:
+        return datetime.strftime(timestamp, "%Y-%m-%d %H:%M:%S")
+
     def check_config(self) -> None:
         # Check oanda tokens and account id
         if self.broker.o.get_currency() is None:
             print(
                 "ERROR: Invalid config file. Make sure you have passed",
                 "a valid config JSON file and a valid OANDA access token",
-                "and account id."
+                "and account id.",
             )
             raise bt.StrategySkipError
         # Check language
-        if "language" not in self.config \
-                or self.config["language"] not in ["EN-US", "ES-ES"]:
+        if "language" not in self.config or self.config["language"] not in [
+            "EN-US",
+            "ES-ES",
+        ]:
             print(
                 "WARNING: Invalid language in config file. Switching to EN-US"
             )
@@ -82,38 +90,34 @@ class BaseStrategy(bt.Strategy):
         if self.telegram_bot.check_bot().status_code != 200:
             print(
                 "WARNING: Invalid Telegram bot token access. Check the config",
-                "JSON file."
+                "JSON file.",
             )
             self.telegram_bot = None  # type: ignore
 
-    def initialize_dicts(self):
+    def initialize_dicts(self) -> None:
         pass
-
-    @staticmethod
-    def datetime_to_str(timestamp: datetime) -> str:
-        return datetime.strftime(timestamp, "%Y-%m-%d %H:%M:%S")
 
     def log(self, text: str, dt: Optional[datetime] = None):
         # dt = dt or self.data[data_name].datetime.datetime(0)
         dtime = dt or self.datetime_to_str(datetime.now())
         print(f"{dtime} - {text}")
 
-    def get_stop_loss(self, data_name):
+    def get_stop_loss(self, data_name: str) -> float:
         pass
 
-    def get_take_profit(self, data_name):
+    def get_take_profit(self, data_name: str) -> float:
         pass
 
-    def enter_buy_signal(self, data_name):
+    def enter_buy_signal(self, data_name: str) -> bool:
         pass
 
-    def near_buy_signal(self, data_name):
+    def near_buy_signal(self, data_name: str) -> bool:
         pass
 
-    def enter_sell_signal(self, data_name):
+    def enter_sell_signal(self, data_name: str) -> bool:
         pass
 
-    def near_sell_signal(self, data_name):
+    def near_sell_signal(self, data_name: str) -> bool:
         pass
 
     def notify_data(self, data: bt.DataBase, status: str) -> None:
@@ -130,7 +134,12 @@ class BaseStrategy(bt.Strategy):
     def notify_trade(self, trade: bt.Trade) -> None:
         pass
 
-    def notify_store(self, msg: Any, *args, **kwargs) -> None:
+    def notify_store(
+        self,
+        msg: Union[dict[str, str], str],
+        *args,
+        **kwargs
+    ) -> None:
         if isinstance(msg, dict):
             if "errorCode" in msg:
                 self.log(f"{msg.errorCode} - {msg.errorMsg}")  # type: ignore
@@ -144,7 +153,7 @@ class BaseStrategy(bt.Strategy):
         else:
             self.log(msg)
 
-    def manage_telegram_notifications(self) -> None:
+    def manage_telegram_notifications(self) -> None:  # TODO: move to TB
         if not hasattr(self, "telegram_bot"):
             return
         now = datetime.now()
@@ -160,8 +169,7 @@ class BaseStrategy(bt.Strategy):
             self.telegram_bot.weekly_notification = True
 
         # Send daily notification
-        if self.telegram_bot.daily_notification \
-                and now.hour == notify_hour:
+        if self.telegram_bot.daily_notification and now.hour == notify_hour:
             response = self.telegram_bot.daily_report()
             if response is None:
                 return
@@ -169,9 +177,11 @@ class BaseStrategy(bt.Strategy):
                 self.telegram_bot.daily_notification = False
                 self.log("Daily report sent via Telegram")
         # Send weekly notification
-        if self.telegram_bot.weekly_notification \
-            and now.hour == notify_hour \
-                and now.weekday() == notify_week_day:  # Weekly rep. on Friday
+        if (
+            self.telegram_bot.weekly_notification
+            and now.hour == notify_hour
+            and now.weekday() == notify_week_day
+        ):  # Weekly rep. on Friday
             response = self.telegram_bot.weekly_report()
             if response is None:
                 return
@@ -189,7 +199,7 @@ class BaseStrategy(bt.Strategy):
 
             # Log the closing price
             # timestamp = self.data[pair].datetime.datetime(0)
-            close = self.data[pair].close[0]
+            close: float = self.data[pair].close[0]
             text = f"{pair} - {close}"
             if self.config["debug"]:
                 self.log(text)
@@ -206,8 +216,11 @@ class BaseStrategy(bt.Strategy):
             # Check if today is Friday to close pending trades at the
             # end of the session
             now = datetime.utcnow()
-            if now.weekday() == 4 and now.hour == 20 \
-                    and now.minute == 60 - self.config["timeframe_num"]:
+            if (
+                now.weekday() == 4
+                and now.hour == 20
+                and now.minute == 60 - self.config["timeframe_num"]
+            ):
                 self.order_manager.cancel_pending_trades()
                 return
 
@@ -229,10 +242,10 @@ class BaseStrategy(bt.Strategy):
                     take_profit = self.get_take_profit(pair)
 
                     # Calculate lot size
-                    size = self.getsizer().getsizing(
+                    size: float = self.getsizer().getsizing(
                         self.data[pair],
                         isbuy=True,
-                        pips=s_l_pips / self.broker.o.get_leverage()
+                        pips=s_l_pips / self.broker.o.get_leverage(),
                     )
 
                     # Get the current ask price and calculate SL and TK
@@ -287,7 +300,7 @@ class BaseStrategy(bt.Strategy):
                     size = self.getsizer().getsizing(
                         self.data[pair],
                         isbuy=False,
-                        pips=s_l_pips / self.broker.o.get_leverage()
+                        pips=s_l_pips / self.broker.o.get_leverage(),
                     )
 
                     # Get the current bid price and calculate SL and TK

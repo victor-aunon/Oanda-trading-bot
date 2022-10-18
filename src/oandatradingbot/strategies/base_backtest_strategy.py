@@ -2,7 +2,7 @@
 from datetime import datetime
 import os
 import sys
-from typing import Optional, Any
+from typing import List, Optional, Union
 
 # Packages
 import backtrader as bt
@@ -11,6 +11,7 @@ import pandas as pd
 import xlsxwriter
 
 # Local
+from oandatradingbot.types.config import ConfigType
 from oandatradingbot.utils.instrument_units import PIP_UNITS
 from oandatradingbot.utils.messages import Messages
 from oandatradingbot.utils.order_manager_backtest import OrderManagerBackTest
@@ -20,12 +21,12 @@ class BaseBackTestStrategy(bt.Strategy):
 
     def __init__(self, **kwargs) -> None:
         super().__init__()
-        self.config = kwargs
-        self.optimize = kwargs["optimize"]
+        self.config: ConfigType = kwargs
+        self.optimize: bool = kwargs["optimize"]
         self.check_config()
-        self.pairs = [p for p in kwargs["pairs"]] if self.optimize \
+        self.pairs: List[str] = [p for p in kwargs["pairs"]] if self.optimize \
             else kwargs["pairs"]
-        self.account_currency = kwargs["account_currency"]
+        self.account_currency: str = kwargs["account_currency"]
         # Attributes that do not require dictionaries
         self.messages = Messages(
             self.config["language"], kwargs["account_currency"]
@@ -59,22 +60,22 @@ class BaseBackTestStrategy(bt.Strategy):
         dtime = dt or self.datetime_to_str(datetime.now())
         print(f"{dtime} - {text}")
 
-    def get_stop_loss(self, data_name: str):
+    def get_stop_loss(self, data_name: str) -> float:
         pass
 
-    def get_take_profit(self, data_name: str):
+    def get_take_profit(self, data_name: str) -> float:
         pass
 
-    def enter_buy_signal(self, data_name: str):
+    def enter_buy_signal(self, data_name: str) -> bool:
         pass
 
-    def near_buy_signal(self, data_name: str):
+    def near_buy_signal(self, data_name: str) -> bool:
         pass
 
-    def enter_sell_signal(self, data_name: str):
+    def enter_sell_signal(self, data_name: str) -> bool:
         pass
 
-    def near_sell_signal(self, data_name: str):
+    def near_sell_signal(self, data_name: str) -> bool:
         pass
 
     def notify_order(self, order: bt.Order) -> None:
@@ -99,7 +100,12 @@ class BaseBackTestStrategy(bt.Strategy):
             if response != "" and self.config["debug"]:
                 self.log(response, self.data[pair].datetime.datetime(0))
 
-    def notify_store(self, msg: Any, *args, **kwargs) -> None:
+    def notify_store(
+        self,
+        msg: Union[dict[str, str], str],
+        *args,
+        **kwargs
+    ) -> None:
         if isinstance(msg, dict):
             if "errorCode" in msg:
                 self.log(f"{msg.errorCode} - {msg.errorMsg}")  # type: ignore
@@ -111,8 +117,8 @@ class BaseBackTestStrategy(bt.Strategy):
         # by each pair
         for pair in self.pairs:
 
-            timestamp = self.data[pair].datetime.datetime(0)
-            close = self.data[pair].close[0]
+            timestamp: datetime = self.data[pair].datetime.datetime(0)
+            close: float = self.data[pair].close[0]
 
             # Check if today is Friday to close the order at the
             # end of the session

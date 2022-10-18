@@ -1,5 +1,8 @@
 
-PIP_UNITS = {
+from typing import Dict
+
+
+PIP_UNITS: Dict[str, float] = {
     "BCH": 10,
     "BTC": 1,
     "ETH": 10,
