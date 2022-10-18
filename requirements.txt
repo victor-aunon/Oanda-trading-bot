@@ -8,4 +8,5 @@ sqlalchemy==1.4.36
 types-requests==2.27.25
 xlsxwriter==3.0.3
 yfinance==0.1.70
+pandas==1.4.4
 btoandav20 @ git+https://github.com/happydasch/btoandav20
