@@ -9,7 +9,7 @@ MacdFastEmaType = TypedDict(
 StrategyParamsType = TypedDict(
     "StrategyParamsType",
     {
-        "macd_fast_ema": MacdFastEmaType,
+        "macd_fast_ema": Union[MacdFastEmaType, int],
         "macd_slow_ema": int,
         "macd_signal_ema": int,
         "ema_period": int,
@@ -28,14 +28,22 @@ ConfigType = TypedDict(
         "cash": float,
         "risk": float,
         "account_currency": str,
-        "language": Union[Literal["ES-ES"], Literal["EN-EN"]],
+        "language": Union[Literal["ES-ES"], Literal["EN-US"]],
         "timeframe_num": int,
         "timeframe": str,
         "interval": str,
         "strategy_params": StrategyParamsType,
         "debug": bool,
+        "testing": bool,
         "optimize": bool,
-        "opt_name": str
+        "opt_name": str,
+        "database_uri": str,
+        "account_type": Literal["Demo", "Brokerage"],
+        "practice": bool,
+        "oanda_token": str,
+        "oanda_account_id": str,
+        "language_tts": Union[Literal["ES-ES"], Literal["EN-US"]],
+        "tts": bool
     },
     total=False,
 )

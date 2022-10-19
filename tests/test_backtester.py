@@ -6,10 +6,11 @@ import pandas as pd
 
 # Locals
 from oandatradingbot.backtester.backtester import main
+from oandatradingbot.types.config import ConfigType
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-config = {
+config: ConfigType = {
     "results_path": os.path.join(current_dir, "results"),
     "pairs": ["EUR_USD"],
     "cash": 10000,

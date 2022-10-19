@@ -1,14 +1,11 @@
 # Libraries
 import argparse
-from datetime import datetime
 import json
 import os
 import sys
 
 # Packages
 import backtrader as bt
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 
 # Locals
 from oandatradingbot.backtester.summarizer import Summarizer
@@ -17,29 +14,7 @@ from oandatradingbot.utils.financial_feed import FinancialFeed
 from oandatradingbot.types.config import ConfigType
 
 CRYPTOS = ["BTC", "BCH", "ETH", "LTC"]
-plt.rcParams["figure.figsize"] = (15, 10)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-
-
-def saveplots(
-    cerebro, numfigs=1, iplot=False, start=None, end=None,
-    dpi=300, tight=True, use=None, **kwargs
-):
-
-    from backtrader import plot
-    if cerebro.p.oldsync:
-        plotter = plot.Plot_OldSync(**kwargs)
-    else:
-        plotter = plot.Plot(**kwargs)
-
-    for stratlist in cerebro.runstrats:
-        for si, strategy in enumerate(stratlist):
-            fig = plotter.plot(
-                strategy, figid=si * 100,
-                numfigs=numfigs, iplot=iplot,
-                start=start, end=end, use=use
-            )
-    return fig
 
 
 def parse_args(pargs=None):
@@ -82,6 +57,7 @@ def main(config_obj=None, testing=False):
 
     config["debug"] = args.debug
     config["optimize"] = False
+    config["testing"] = testing
 
     if config["results_path"] == "the path where results will be saved":
         print("ERROR: Change the name of the results_path before backtesting")
@@ -98,7 +74,7 @@ def main(config_obj=None, testing=False):
 
     # Transform config dictionary
     for param in config["strategy_params"]:
-        config[param] = config["strategy_params"][param]
+        config[param] = config["strategy_params"][param]  # type: ignore
     config.pop("strategy_params", None)
 
     for pair in list(config["pairs"]):  # type: ignore
@@ -129,26 +105,12 @@ def main(config_obj=None, testing=False):
         results = cerebro.run()
 
         summarizer = Summarizer(
-            results[0], config, pair
+            results[0], config, pair, results[0].strat_name
         )
 
         # Print and save summary in the results Excel file
         summarizer.print_summary()
         summarizer.save_summary()
 
-        # Only show the figure if not running a test
-        if testing:
-            figure: Figure = saveplots(
-                cerebro, style="candle", barup="green", bardown="red"
-            )[0]
-        else:
-            figure = cerebro.plot(
-                style="candle", barup="green", bardown="red"
-            )[0][0]
-
-        file_name = (
-            f"{results[0].strat_name}_{pair}_"
-            f"{datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')}.png"
-        )
-        figure.savefig(os.path.join(config["results_path"], file_name))
-        plt.close("all")
+        # Save strategy performance figure
+        summarizer.save_plots(cerebro)
