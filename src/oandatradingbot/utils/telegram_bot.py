@@ -7,6 +7,7 @@ import requests
 
 # Local
 from oandatradingbot.repository.repository import Repository
+from oandatradingbot.types.config import ConfigType
 
 
 currency_emoji = {
@@ -21,20 +22,14 @@ class TelegramBot:
 
     def __init__(
         self,
-        token: str,
-        chat_id: str,
-        db_uri: str,
-        account_currency: str = "EUR",
-        report_freq: str = "Daily",
-        report_hour: int = 22
+        config: ConfigType,
     ) -> None:
-
-        self.token = token
-        self.chat_id = chat_id
-        self.repository = Repository(db_uri)
-        self.currency = account_currency
-        self.report_freq = report_freq
-        self.report_hour = report_hour
+        self.token = config["telegram_token"]
+        self.chat_id = config["telegram_chat_id"]
+        self.repository = Repository(config["database_uri"])
+        self.currency = config["account_currency"]
+        self.report_freq = config["telegram_report_frequency"] if \
+            "telegram_report_frequency" in config else "Daily"
         self.daily_notification = True
         self.weekly_notification = True
 
@@ -128,8 +123,27 @@ class TelegramBot:
         )
         return msg
 
-    def notify_trade(self, trade_id: int) -> Union[requests.Response, None]:
+    def manage_notifications(self, now: datetime = datetime.utcnow()) -> int:
+        if self.report_freq == "Daily":
+            response = self.daily_report(now)
+            if response is not None and response.status_code == 200:
+                print(
+                    f"{datetime.strftime(now, '%Y-%m-%d %H:%M:%S')} - "
+                    "Daily report sent via Telegram"
+                )
+                return 1
+        # Send weekly report on Fridays
+        if now.weekday() == 4:
+            response = self.weekly_report(now)
+            if response is not None and response.status_code == 200:
+                print(
+                    f"{datetime.strftime(now, '%Y-%m-%d %H:%M:%S')} - "
+                    "Weekly report sent via Telegram"
+                )
+                return 2
+        return 0
 
+    def notify_trade(self, trade_id: int) -> Union[requests.Response, None]:
         if self.report_freq != "Trade":
             return None
         text = self._format_trade(trade_id)

@@ -1,35 +1,18 @@
 # Libraries
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Packages
 import backtrader
 import pytest
 
 # Local
+from oandatradingbot.repository.repository import Repository
 from oandatradingbot.types.config import ConfigType
-from oandatradingbot.types.trade import TradeDbType
 from oandatradingbot.oandabot import main
+from tests.trades import trade1, trade2, trade3, trade4
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-
-trade1: TradeDbType = {
-    "id": 1,
-    "instrument": "EUR_USD",
-    "account": "Demo",
-    "entry_time": datetime(2022, 10, 4, 11, 30),
-    "exit_time": datetime(2022, 10, 4, 11, 30) + timedelta(minutes=15),
-    "duration": 15 * 60,
-    "operation": "BUY",
-    "size": 5000.0,
-    "entry_price": 1.15,
-    "exit_price": 1.16,
-    "trade_pips": (1.16 - 1.15) * 1e5,
-    "stop_loss": 1.14,
-    "take_profit": 1.16,
-    "canceled": False,
-    "profit": 25.50,
-}
 
 config: ConfigType = {
     "database_uri": f"sqlite:///{os.path.join(current_dir, 'test_oanda.db')}",
@@ -45,6 +28,11 @@ config: ConfigType = {
     "language": "EN-US",
     "tts": True,
     "language_tts": "EN-US",
+    "testing": True,
+    # testing_date is a Friday so the bot send weekly report and closes
+    # pending trades. Time is 00:00 so the test can be run at any hour ->
+    # timers will always fire
+    "testing_date": datetime(2022, 10, 7, 0, 0, 0),
     "telegram_token": os.environ["telegram_token"],
     "telegram_chat_id": os.environ["telegram_chat_id"],
     "strategy_params": {
@@ -60,13 +48,15 @@ config: ConfigType = {
 
 
 def test_oandabot():
+    repository = Repository(config["database_uri"])
+
+    repository.save_trade(trade1)
+    repository.save_trade(trade2)
+    repository.save_trade(trade3)
+    repository.save_trade(trade4)
 
     with pytest.raises(backtrader.errors.StrategySkipError):
-        print(config["database_uri"])
-        main(
-            config,
-            True
-        )
+        main(config)
 
     # Delete db
     os.remove(os.path.join(current_dir, 'test_oanda.db'))

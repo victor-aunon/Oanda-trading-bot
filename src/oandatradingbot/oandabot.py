@@ -42,7 +42,7 @@ def parse_args(pargs=None):
     return parser.parse_args(pargs)
 
 
-def main(config_obj=None, testing=False):
+def main(config_obj=None) -> None:
     print("====== Starting backtrader ======")
     args = parse_args()
 
@@ -53,13 +53,15 @@ def main(config_obj=None, testing=False):
     else:
         config = config_obj
 
+    # Default database
     if "database_uri" not in config:
         config["database_uri"] = \
             f"sqlite:///{os.path.join(current_dir, 'trades.db')}"
 
     config["account_type"] = "Demo" if config["practice"] else "Brokerage"
-    config["testing"] = testing
     config["debug"] = args.debug
+    if "testing" not in config:
+        config["testing"] = False
     # Check there are no repeated pairs
     config["pairs"] = list(set(config["pairs"]))
 
@@ -76,7 +78,8 @@ def main(config_obj=None, testing=False):
 
     # Transform config dictionary
     for param in config["strategy_params"]:
-        config[param] = config["strategy_params"][param]
+        p = config["strategy_params"][param]  # type: ignore[literal-required]
+        config[param] = p  # type: ignore[literal-required]
     config.pop("strategy_params", None)
 
     for pair in config["pairs"]:
@@ -95,7 +98,9 @@ def main(config_obj=None, testing=False):
         )
     cerebro.broker = store.getbroker()  # Assign Oanda broker
 
-    cerebro.addstrategy(MacdEmaAtrLive, **config)
+    kwargs = config
+    kwargs["config"] = config  # type: ignore[typeddict-item]
+    cerebro.addstrategy(MacdEmaAtrLive, **kwargs)
 
     # Sizes are going to be a percentage of the cash
     cerebro.addsizer(OandaV20RiskPercentSizer, percents=config["risk"] / 100)
