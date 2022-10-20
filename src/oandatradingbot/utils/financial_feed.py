@@ -1,25 +1,42 @@
+# Libraries
 from datetime import datetime, timedelta
 import time
+
+# Packages
 import yfinance as yf
+from pandas import DataFrame
+
+CRYPTOS = ["BTC", "BCH", "ETH", "LTC"]
+INTERVALS = [
+    "1m", "2m", "5m", "15m", "30m", "60m", "90m",
+    "1h", "1d", "5d", "1wk", "1mo", "3mo"
+]
 
 
 class FinancialFeed:
-    def __init__(self, ticker, market, interval="5m") -> None:
+    def __init__(self, instrument: str, interval="5m") -> None:
+        if interval not in INTERVALS:
+            raise SystemExit(
+                f"Invalid interval. Valid intervals are {INTERVALS}"
+            )
         self.interval = interval
-        self.set_ticker(ticker, market)
+        self.set_instrument(instrument)
         self.get_start_end()
         self.retrieve_feed()
+        if self.feed.size == 0:
+            raise SystemExit("Invalid instrument, not found in Yahoo Finance")
 
-    def set_ticker(self, ticker, market):
-        ticker = ticker.replace("_", "")
-        ticker = ticker.replace("/", "")
-        ticker = ticker.replace("-", "")
+    def set_instrument(self, instrument: str) -> None:
+        market = "fx" if instrument.split("_")[0] not in CRYPTOS else "crypto"
+        instrument = instrument.replace("_", "")
+        instrument = instrument.replace("/", "")
+        instrument = instrument.replace("-", "")
         if market == "fx":
-            self.ticker = f"{ticker}=X"
+            self.instrument = f"{instrument}=X"
         elif market == "crypto":
-            self.ticker = f"{ticker[0:3]}-{ticker[3:]}"
+            self.instrument = f"{instrument[0:3]}-{instrument[3:]}"
 
-    def get_start_end(self):
+    def get_start_end(self) -> None:
         if self.interval == "1m":
             self.start = (datetime.now() - timedelta(days=6)).date()
             self.end = (datetime.now() + timedelta(days=1)).date()
@@ -33,9 +50,9 @@ class FinancialFeed:
             self.start = (datetime.now() - timedelta(days=30 * 365)).date()
             self.end = (datetime.now() + timedelta(days=1)).date()
 
-    def retrieve_feed(self):
-        feed = yf.download(
-            tickers=self.ticker,
+    def retrieve_feed(self) -> None:
+        feed: DataFrame = yf.download(
+            tickers=self.instrument,
             start=self.start,
             end=self.end,
             interval=self.interval
@@ -51,8 +68,8 @@ class FinancialFeed:
             pass
         self.feed = feed
 
-    def get_feed(self):
+    def get_feed(self) -> DataFrame:
         return self.feed
 
-    def print_feed(self):
+    def print_feed(self) -> None:
         print(self.feed)
