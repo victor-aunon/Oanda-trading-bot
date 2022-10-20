@@ -1,5 +1,7 @@
+# Packages
 import pytest
 
+# Locals
 from oandatradingbot.utils.messages import Messages
 
 
@@ -7,24 +9,50 @@ from oandatradingbot.utils.messages import Messages
 def test_messages(language):
     messages = Messages(language, "EUR")
     size = 10000
-    pair = "EUR_CAD"
+    inst = "EUR_CAD"
     price = 1.05
     amount = 10.50
-    assert isinstance(messages.near_buy_signal(pair), str)
-    assert isinstance(messages.near_sell_signal(pair), str)
-    assert isinstance(messages.buy_order_submitted(size, pair, 1), str)
-    assert isinstance(messages.sell_order_submitted(size, pair, 1), str)
-    assert isinstance(messages.buy_order_rejected(pair, 1), str)
-    assert isinstance(messages.sell_order_rejected(pair, 1), str)
-    assert isinstance(messages.buy_order_placed(size, pair, price, 1), str)
-    assert isinstance(messages.sell_order_placed(size, pair, price, 1), str)
-    assert isinstance(messages.limit_buy_order(pair, amount, 1), str)
-    assert isinstance(messages.limit_sell_order(pair, amount, 1), str)
-    assert isinstance(messages.stop_buy_order(pair, amount, 1), str)
-    assert isinstance(messages.stop_sell_order(pair, amount, 1), str)
-    assert isinstance(messages.stop_order_accepted(pair, 1), str)
-    assert isinstance(messages.stop_order_replaced(pair, 1), str)
-    assert isinstance(messages.limit_order_accepted(pair, 1), str)
-    assert isinstance(messages.limit_order_replaced(pair, 1), str)
-    assert isinstance(messages.buy_order_canceled(pair, amount, 1), str)
-    assert isinstance(messages.sell_order_canceled(pair, amount, 1), str)
+    assert isinstance(messages.near_buy_signal(inst), str)
+    assert isinstance(messages.near_sell_signal(inst), str)
+    assert isinstance(messages.buy_order_submitted(size, inst, 1), str)
+    assert isinstance(messages.sell_order_submitted(size, inst, 1), str)
+    assert isinstance(messages.buy_order_rejected(inst, 1), str)
+    assert isinstance(messages.sell_order_rejected(inst, 1), str)
+    assert isinstance(messages.buy_order_placed(size, inst, price, 1), str)
+    assert isinstance(messages.sell_order_placed(size, inst, price, 1), str)
+    assert isinstance(messages.limit_buy_order(inst, amount, 1), str)
+    assert isinstance(messages.limit_sell_order(inst, amount, 1), str)
+    assert isinstance(messages.stop_buy_order(inst, amount, 1), str)
+    assert isinstance(messages.stop_sell_order(inst, amount, 1), str)
+    assert isinstance(messages.stop_order_accepted(inst, 1), str)
+    assert isinstance(messages.stop_order_replaced(inst, 1), str)
+    assert isinstance(messages.limit_order_accepted(inst, 1), str)
+    assert isinstance(messages.limit_order_replaced(inst, 1), str)
+    assert isinstance(messages.buy_order_canceled(inst, amount, 1), str)
+    assert isinstance(messages.sell_order_canceled(inst, amount, 1), str)
+
+
+def test_messages_language_not_valid():
+    messages = Messages("valyrian", "EUR")
+    size = 10000
+    inst = "EUR_CAD"
+    price = 1.05
+    amount = 10.50
+    assert messages.near_buy_signal(inst) is None
+    assert messages.near_sell_signal(inst) is None
+    assert messages.buy_order_submitted(size, inst, 1) is None
+    assert messages.sell_order_submitted(size, inst, 1) is None
+    assert messages.buy_order_rejected(inst, 1) is None
+    assert messages.sell_order_rejected(inst, 1) is None
+    assert messages.buy_order_placed(size, inst, price, 1) is None
+    assert messages.sell_order_placed(size, inst, price, 1) is None
+    assert messages.limit_buy_order(inst, amount, 1) is None
+    assert messages.limit_sell_order(inst, amount, 1) is None
+    assert messages.stop_buy_order(inst, amount, 1) is None
+    assert messages.stop_sell_order(inst, amount, 1) is None
+    assert messages.stop_order_accepted(inst, 1) is None
+    assert messages.stop_order_replaced(inst, 1) is None
+    assert messages.limit_order_accepted(inst, 1) is None
+    assert messages.limit_order_replaced(inst, 1) is None
+    assert messages.buy_order_canceled(inst, amount, 1) is None
+    assert messages.sell_order_canceled(inst, amount, 1) is None
