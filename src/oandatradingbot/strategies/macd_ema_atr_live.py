@@ -4,14 +4,16 @@ from backtrader.indicators.ema import ExponentialMovingAverage as EMA
 from backtrader.indicators.macd import MACD
 from backtrader.lineseries import LineSeries
 from backtrader.lineiterator import LineIterator
+from backtrader.indicator import Indicator
 
 # Locals
 from oandatradingbot.strategies.base_strategy import BaseStrategy
+from oandatradingbot.types.config import StrategyParamsType
 
 
 class MacdEmaAtrLive(BaseStrategy):
 
-    params = {
+    params: StrategyParamsType = {
         "macd_fast_ema": 12,
         "macd_slow_ema": 26,
         "macd_signal_ema": 9,
@@ -36,11 +38,11 @@ class MacdEmaAtrLive(BaseStrategy):
 
     def initialize_dicts(self) -> None:
         # Dictionaries whose keys are the fx pairs
-        self.data = {}
-        self.macd = {}
-        self.ema = {}
-        self.atr = {}
-        self.data_ready = {}
+        self.data: dict[str, LineIterator] = {}
+        self.macd: dict[str, Indicator] = {}
+        self.ema: dict[str, Indicator] = {}
+        self.atr: dict[str, Indicator] = {}
+        self.data_ready: dict[str, bool] = {}
         # Fill the previous dictionaries
         for pair in self.pairs:
             # Indicators
