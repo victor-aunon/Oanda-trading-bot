@@ -1,8 +1,11 @@
+# Libraries
 import os
 
+# Locals
+from oandatradingbot.types.config import ConfigType
 from oandatradingbot.utils.instrument_manager import InstrumentManager
 
-config = {
+config: ConfigType = {
     "oanda_token": os.environ["oanda_token"],
     "oanda_account_id": os.environ["oanda_account_id"],
     "practice": True,
