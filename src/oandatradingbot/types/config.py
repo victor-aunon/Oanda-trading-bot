@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Literal, Union
 from typing_extensions import TypedDict
 
@@ -35,6 +36,7 @@ ConfigType = TypedDict(
         "strategy_params": StrategyParamsType,
         "debug": bool,
         "testing": bool,
+        "testing_date": datetime,
         "optimize": bool,
         "opt_name": str,
         "database_uri": str,
@@ -45,6 +47,8 @@ ConfigType = TypedDict(
         "language_tts": Union[Literal["ES-ES"], Literal["EN-US"]],
         "telegram_token": str,
         "telegram_chat_id": str,
+        "telegram_report_frequency": Literal["Trade", "Daily", "Weekly"],
+        "telegram_report_hour": int,
         "tts": bool
     },
     total=False,

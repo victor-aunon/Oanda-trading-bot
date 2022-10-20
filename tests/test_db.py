@@ -1,5 +1,5 @@
 # Libraries
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 
 # Packages
@@ -7,82 +7,10 @@ import pytest
 
 # Local
 from oandatradingbot.repository.repository import Repository
-from oandatradingbot.types.trade import TradeDbType
+from tests.trades import trade1, trade2, trade3, trade4
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 db_uri = f"sqlite:///{os.path.join(current_dir, 'test.db')}"
-
-trade1: TradeDbType = {
-    "id": 1,
-    "instrument": "EUR_USD",
-    "account": "Demo",
-    "entry_time": datetime(2022, 10, 4, 11, 30),
-    "exit_time": datetime(2022, 10, 4, 11, 30) + timedelta(minutes=15),
-    "duration": 15 * 60,
-    "operation": "BUY",
-    "size": 5000.0,
-    "entry_price": 1.15,
-    "exit_price": 1.16,
-    "trade_pips": (1.16 - 1.15) * 1e5,
-    "stop_loss": 1.14,
-    "take_profit": 1.16,
-    "canceled": False,
-    "profit": 25.50,
-}
-
-trade2: TradeDbType = {
-    "id": 2,
-    "instrument": "EUR_USD",
-    "account": "Demo",
-    "entry_time": datetime(2022, 10, 4, 17, 30),
-    "exit_time": datetime(2022, 10, 4, 17, 30) + timedelta(minutes=25),
-    "duration": 25 * 60,
-    "operation": "BUY",
-    "size": 5000.0,
-    "entry_price": 1.15,
-    "exit_price": 1.16,
-    "trade_pips": (1.16 - 1.15) * 1e5,
-    "stop_loss": 1.14,
-    "take_profit": 1.16,
-    "canceled": False,
-    "profit": 28.50,
-}
-
-trade3: TradeDbType = {
-    "id": 3,
-    "instrument": "EUR_USD",
-    "account": "Demo",
-    "entry_time": datetime(2022, 10, 5, 11, 30),
-    "exit_time": datetime(2022, 10, 5, 11, 30) + timedelta(minutes=45),
-    "duration": 45 * 60,
-    "operation": "SELL",
-    "size": 5000.0,
-    "entry_price": 1.15,
-    "exit_price": 1.16,
-    "trade_pips": (1.16 - 1.15) * 1e5,
-    "stop_loss": 1.14,
-    "take_profit": 1.16,
-    "canceled": False,
-    "profit": 22.50,
-}
-
-trade4: TradeDbType = {
-    "id": 4,
-    "instrument": "EUR_USD",
-    "account": "Demo",
-    "entry_time": datetime(2022, 10, 10, 11, 30),
-    "exit_time": datetime(2022, 10, 10, 11, 30) + timedelta(hours=2),
-    "duration": 2 * 60 * 60,
-    "operation": "SELL",
-    "size": 5000.0,
-    "entry_price": 1.15,
-    "exit_price": 1.16,
-    "trade_pips": (1.16 - 1.15) * 1e5,
-    "stop_loss": 1.14,
-    "take_profit": 1.16,
-    "canceled": False,
-    "profit": 30.10,
-}
 
 
 def test_raise_exception_when_db_uri_is_invalid():
