@@ -2,6 +2,9 @@
 from datetime import datetime, timedelta
 import os
 
+# Packages
+import pytest
+
 # Local
 from oandatradingbot.repository.repository import Repository
 from oandatradingbot.types.trade import TradeDbType
@@ -80,6 +83,12 @@ trade4: TradeDbType = {
     "canceled": False,
     "profit": 30.10,
 }
+
+
+def test_raise_exception_when_db_uri_is_invalid():
+    with pytest.raises(SystemExit):
+        repository = Repository("")
+        repository.start_session()
 
 
 def test_create_trade():
