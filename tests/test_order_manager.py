@@ -2,12 +2,9 @@
 import os
 from datetime import datetime
 
-# Packages
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-
 # Local
-from oandatradingbot.dbmodels.trade import Base
+from oandatradingbot.types.api_transaction import ApiTransactionType
+from oandatradingbot.types.config import ConfigType
 from oandatradingbot.utils.instrument_manager import InstrumentManager
 from oandatradingbot.utils.messages import Messages
 from oandatradingbot.utils.order_manager import OrderManager
@@ -16,7 +13,7 @@ from oandatradingbot.utils.tts import TTS
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-config = {
+config: ConfigType = {
     "database_uri": f"sqlite:///{os.path.join(current_dir, 'test.db')}",
     "oanda_token": os.environ["oanda_token"],
     "oanda_account_id": os.environ["oanda_account_id"],
@@ -38,7 +35,7 @@ class Transaction:
         self.units = units
 
     @property
-    def dict(self) -> dict:
+    def dict(self) -> ApiTransactionType:
         return {
             "type": self.type,
             "reason": self.reason,
@@ -54,20 +51,13 @@ class Transaction:
         }
 
 
-def create_session():
-    engine = create_engine(
-        config["database_uri"], echo=True
-    )
-    Base.metadata.create_all(engine)
-    return Session(bind=engine)
-
-
 def test_recover_orders():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     assert om.recover_orders() is None
 
@@ -75,9 +65,10 @@ def test_recover_orders():
 def test_buy_order_rejected():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     # Testing order submitted and rejected: stop loss on fill loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "1", "4000").dict
@@ -91,15 +82,16 @@ def test_buy_order_rejected():
 def test_buy_order_stop_loss():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
     tb = TelegramBot(
         config["telegram_token"],
         config["telegram_chat_id"],
-        session,
+        config["database_uri"],
         "EUR", "Trade"
     )
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts, tb)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts, tb
+    )
 
     # Testing exiting by stop loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "2", "4000").dict
@@ -126,9 +118,10 @@ def test_buy_order_stop_loss():
 def test_buy_order_take_profit():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     # Testing exiting by take profit
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "4", "4000").dict
@@ -155,9 +148,10 @@ def test_buy_order_take_profit():
 def test_cancel_buy_order():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     # Testing market order canceled
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "6", "4000").dict
@@ -185,9 +179,10 @@ def test_cancel_buy_order():
 def test_sell_order_rejected():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     # Testing order submitted and rejected: stop loss on fill loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "8", "-4000").dict
@@ -201,9 +196,10 @@ def test_sell_order_rejected():
 def test_sell_order_stop_loss():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     # Testing exiting by stop loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "9", "-4000").dict
@@ -230,9 +226,10 @@ def test_sell_order_stop_loss():
 def test_sell_order_take_profit():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     # Testing exiting by take profit
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "11", "-4000").dict
@@ -259,9 +256,10 @@ def test_sell_order_take_profit():
 def test_cancel_sell_order():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     # Testing market order canceled
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "13", "-4000").dict
@@ -289,14 +287,14 @@ def test_cancel_sell_order():
 def test_other_order():
     messages = Messages("EN-US", "EUR")
     tts = TTS("EN-US")
-    session = create_session()
     im = InstrumentManager(config)
-    om = OrderManager(messages, session, im, "Demo", config["pairs"], tts)
+    om = OrderManager(
+        messages, config["database_uri"], im, "Demo", config["pairs"], tts
+    )
 
     # Skipping some other type/reason
     trans = Transaction("OTHER_TYPE", "OTHER_REASON", "99", "4000").dict
     assert om.manage_transaction(trans) == ""
 
     # Delete db
-    session.close_all()
     os.remove(os.path.join(current_dir, 'test.db'))

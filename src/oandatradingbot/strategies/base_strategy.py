@@ -6,12 +6,9 @@ from typing import List, Optional, Union
 
 # Packages
 import backtrader as bt
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
 # Local
 from oandatradingbot.types.config import ConfigType
-from oandatradingbot.dbmodels.trade import Base
 from oandatradingbot.utils.instrument_manager import InstrumentManager
 from oandatradingbot.utils.messages import Messages
 from oandatradingbot.utils.order_manager import OrderManager
@@ -34,15 +31,12 @@ class BaseStrategy(bt.Strategy):
         )
         if kwargs["tts"]:
             self.tts = TTS(self.config["language_tts"], 120)
-        engine = create_engine(kwargs["database_uri"])
-        Base.metadata.create_all(engine)
-        self.db_session = Session(bind=engine)
         self.instrument_manager = InstrumentManager(self.config)
         if "telegram_token" in self.config:
             self.telegram_bot = TelegramBot(
                 kwargs["telegram_token"],
                 kwargs["telegram_chat_id"],
-                self.db_session,
+                self.config["database_uri"],
                 self.account_currency,
                 kwargs["telegram_report_frequency"]
                 if "telegram_report_frequency" in kwargs
@@ -54,7 +48,7 @@ class BaseStrategy(bt.Strategy):
             self.check_telegram_bot()
         self.order_manager = OrderManager(
             self.messages,
-            self.db_session,
+            self.config["database_uri"],
             self.instrument_manager,
             self.account_type,
             self.pairs,
@@ -170,7 +164,7 @@ class BaseStrategy(bt.Strategy):
 
         # Send daily notification
         if self.telegram_bot.daily_notification and now.hour == notify_hour:
-            response = self.telegram_bot.daily_report()
+            response = self.telegram_bot.daily_report(now)
             if response is None:
                 return
             if response.status_code == 200:
@@ -182,7 +176,7 @@ class BaseStrategy(bt.Strategy):
             and now.hour == notify_hour
             and now.weekday() == notify_week_day
         ):  # Weekly rep. on Friday
-            response = self.telegram_bot.weekly_report()
+            response = self.telegram_bot.weekly_report(now)
             if response is None:
                 return
             if response.status_code == 200:
@@ -210,7 +204,6 @@ class BaseStrategy(bt.Strategy):
             # Stop the execution when running a test
             if self.testing:
                 self.order_manager.cancel_pending_trades()
-                self.db_session.close()
                 raise bt.StrategySkipError
 
             # Check if today is Friday to close pending trades at the

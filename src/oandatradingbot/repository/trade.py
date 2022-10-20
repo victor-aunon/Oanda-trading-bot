@@ -1,15 +1,15 @@
+# Packages
 from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean
-from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 
-
-Base: DeclarativeMeta = declarative_base()
+# Locals
+from oandatradingbot.repository.base import Base
 
 
 class Trade(Base):
     __tablename__ = "trades"
 
     id = Column(Integer, primary_key=True)
-    pair = Column(String(30))
+    instrument = Column(String(30))
     account = Column(String(20))
     entry_time = Column(DateTime)
     exit_time = Column(DateTime)

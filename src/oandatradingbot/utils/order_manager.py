@@ -1,19 +1,19 @@
 # Libraries
 from datetime import datetime
 import re
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Optional
 
 # Packages
 import requests
-from sqlalchemy import Boolean
-from sqlalchemy.orm import Session
 
 # Local
+from oandatradingbot.repository.repository import Repository
+from oandatradingbot.types.trade import TradeDbType
+from oandatradingbot.types.api_transaction import ApiTransactionType
 from oandatradingbot.utils.instrument_manager import InstrumentManager
 from oandatradingbot.utils.messages import Messages
 from oandatradingbot.utils.telegram_bot import TelegramBot
 from oandatradingbot.utils.tts import TTS
-from oandatradingbot.dbmodels.trade import Trade
 
 
 REJECTED_REASONS = [
@@ -27,7 +27,7 @@ CANCEL_REASONS = ["MARKET_ORDER_POSITION_CLOSEOUT", "MARKET_ORDER_TRADE_CLOSE"]
 class OrderManager:
     def __init__(
         self, messages_engine: Messages,
-        db_session: Session,
+        db_uri: str,
         instrument_manager: InstrumentManager,
         account_type: str,
         pairs: List[str],
@@ -35,7 +35,7 @@ class OrderManager:
         telegram_bot: Optional[TelegramBot] = None
     ) -> None:
         self.messages = messages_engine
-        self.db_session = db_session
+        self.repository = Repository(db_uri)
         self.instrument_manager = instrument_manager
         self.account_type = account_type
         self.tts = tts_engine
@@ -55,13 +55,13 @@ class OrderManager:
         # Check for pending orders
         self.recover_orders()
 
-    def has_buyed(self, pair: str) -> Boolean:
+    def has_buyed(self, pair: str) -> bool:
         return self.buyed[pair]
 
-    def has_selled(self, pair: str) -> Boolean:
+    def has_selled(self, pair: str) -> bool:
         return self.selled[pair]
 
-    def recover_orders(self) -> None:
+    def recover_orders(self) -> None:  # TODO: return something (number)
         url = self.instrument_manager.url
         account_id = self.instrument_manager.account_id
         token = self.instrument_manager.token
@@ -183,7 +183,7 @@ class OrderManager:
         )
         return response.json()["transaction"]
 
-    def manage_transaction(self, transaction: Dict[str, Any]) -> str:
+    def manage_transaction(self, transaction: ApiTransactionType) -> str:
         # Submit market order
         if transaction["type"] == "MARKET_ORDER" \
                 and transaction["reason"] == "CLIENT_ORDER":
@@ -508,53 +508,49 @@ class OrderManager:
             response = ""
         return response
 
-    def _store_trade_in_db(self, type: str, exit_type: str, pair: str) -> None:
-        main_order = self.buy_order[pair] if type == "BUY" \
-            else self.sell_order[pair]
+    def _store_trade_in_db(
+        self, type: str, exit_type: str, instrument: str
+    ) -> None:
+        main_order = self.buy_order[instrument] if type == "BUY" \
+            else self.sell_order[instrument]
         entry_time = datetime.utcfromtimestamp(
             float(main_order["MK"]["time"])  # type: ignore
         )
         exit_time = datetime.utcfromtimestamp(
             float(main_order[exit_type]["time"])  # type: ignore
         )
-        duration = exit_time - entry_time
-        entry_price = float(main_order["MK"]["price"])  # type: ignore
-        exit_price = float(main_order[exit_type]["price"])  # type: ignore
-        units = self.instrument_manager.get_units(pair)
         trade_pips = (
             float(main_order[exit_type]["price"])  # type: ignore
             - float(main_order["MK"]["price"])  # type: ignore
-            ) * units
+            ) * self.instrument_manager.get_units(instrument)
         stop_loss = abs(
             float(main_order["MK"]["price"])  # type: ignore
             - float(main_order["SL"]["price"])  # type: ignore
-        ) * units
+        ) * self.instrument_manager.get_units(instrument)
         take_profit = abs(
             float(main_order["MK"]["price"])  # type: ignore
             - float(main_order["TK"]["price"])  # type: ignore
-        ) * units
-        profit = round(float(main_order[exit_type]["pl"]), 2)  # type:ignore
+        ) * self.instrument_manager.get_units(instrument)
 
-        with self.db_session as session:
-            trade_db = Trade(
-                id=int(main_order["MK"]["id"]),  # type: ignore
-                pair=pair,
-                account=self.account_type,
-                entry_time=entry_time,
-                exit_time=exit_time,
-                duration=duration.seconds,
-                operation=type,
-                size=float(main_order["MK"]["units"]),  # type: ignore
-                entry_price=entry_price,
-                exit_price=exit_price,
-                trade_pips=trade_pips,
-                stop_loss=stop_loss,
-                take_profit=take_profit,
-                canceled=False if exit_type in ["SL", "TK"] else True,
-                profit=profit,
-            )
-            session.add(trade_db)
-            session.commit()
+        trade: TradeDbType = {
+            "id": int(main_order["MK"]["id"]),
+            "instrument": instrument,
+            "account": self.account_type,
+            "entry_time": entry_time,
+            "exit_time": exit_time,
+            "duration": (exit_time - entry_time).seconds,
+            "operation": type,
+            "size": float(main_order["MK"]["units"]),
+            "entry_price": float(main_order["MK"]["price"]),
+            "exit_price": float(main_order[exit_type]["price"]),
+            "trade_pips": trade_pips,
+            "stop_loss": stop_loss,
+            "take_profit": take_profit,
+            "canceled": False if exit_type in ["SL", "TK"] else True,
+            "profit": round(float(main_order[exit_type]["pl"]), 2)
+        }
+
+        self.repository.save_trade(trade)
 
         # Send Telegram notification if required
         if self.telegram_bot is not None:

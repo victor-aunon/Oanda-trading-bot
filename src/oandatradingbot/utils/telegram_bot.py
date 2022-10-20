@@ -4,11 +4,9 @@ from typing import Union
 
 # Packages
 import requests
-from sqlalchemy import extract
-from sqlalchemy.orm import Session
 
 # Local
-from oandatradingbot.dbmodels.trade import Trade
+from oandatradingbot.repository.repository import Repository
 
 
 currency_emoji = {
@@ -25,7 +23,7 @@ class TelegramBot:
         self,
         token: str,
         chat_id: str,
-        db_session: Session,
+        db_uri: str,
         account_currency: str = "EUR",
         report_freq: str = "Daily",
         report_hour: int = 22
@@ -33,7 +31,7 @@ class TelegramBot:
 
         self.token = token
         self.chat_id = chat_id
-        self.session = db_session
+        self.repository = Repository(db_uri)
         self.currency = account_currency
         self.report_freq = report_freq
         self.report_hour = report_hour
@@ -45,7 +43,7 @@ class TelegramBot:
         return response
 
     def _format_trade(self, trade_id: int) -> str:
-        trade = self.session.query(Trade).filter(Trade.id == trade_id).first()
+        trade = self.repository.get_trade(trade_id)
 
         if trade is None:
             return ""
@@ -55,7 +53,8 @@ class TelegramBot:
             if self.currency in currency_emoji else "💵"
 
         msg = (
-            f"🔔<b>Trade {trade.id}: {trade.operation} {trade.pair}</b>\n\n"
+            f"🔔<b>Trade {trade.id}: {trade.operation} "
+            f"{trade.instrument}</b>\n\n"
             f"   Entry: {datetime.strftime(trade.entry_time, '%H:%M:%S')}\n"
             f"   Exit: {datetime.strftime(trade.exit_time, '%H:%M:%S')}\n"
             f"   Size: {trade.size}\n\n"
@@ -63,10 +62,8 @@ class TelegramBot:
         )
         return msg
 
-    def _format_daily_report(self) -> str:
-        trades = self.session.query(Trade).filter(
-            extract("day", Trade.exit_time) == datetime.utcnow().day
-        ).all()
+    def _format_daily_report(self, day: datetime) -> str:
+        trades = self.repository.get_day_trades(day)
 
         if len(trades) == 0:
             return ""
@@ -78,30 +75,25 @@ class TelegramBot:
         trades_summary = ""
         for trade in trades:
             trades_summary += (
-                f"•{trade.pair} -> {trade.operation}: "
+                f"•{trade.instrument} -> {trade.operation}: "
                 f"<b>{trade.profit:.2f} {self.currency}</b>\n"
             )
         curr_emoji = currency_emoji[self.currency] \
             if self.currency in currency_emoji else "💵"
 
         msg = (
-            f"📰 <b>Trades {datetime.utcnow().date()}</b>\n\n"
+            f"📰 <b>Trades {day.date()}</b>\n\n"
             f"{trades_summary}"
             f"\n🎯Wins: {wins}, Losses: {losses}, WR: {win_ratio:.3f}\n"
             f"{curr_emoji} <b>Total profit: {total_pl:.2f} {self.currency}</b>"
         )
         return msg
 
-    def _format_weekly_report(self) -> str:
-        now = datetime.utcnow()
-        saturday = datetime(now.year, now.month, now.day, 23, 59, 59) \
-            + timedelta(days=1)
-        monday = saturday - timedelta(days=6)
+    def _format_weekly_report(self, friday: datetime) -> str:
+        monday = friday - timedelta(days=5)
+        monday_start = datetime(monday.year, monday.month, monday.day, 0, 0)
 
-        trades = self.session.query(Trade).filter(
-            Trade.exit_time >= monday,
-            Trade.exit_time <= saturday
-        ).all()
+        trades = self.repository.get_week_trades(monday_start, friday)
 
         if len(trades) == 0:
             return ""
@@ -111,15 +103,15 @@ class TelegramBot:
         win_ratio = wins / len(trades)
         total_pl = sum([tr.profit for tr in trades])
 
-        pair_dict = {}
+        instruments = {}
         for trade in trades:
-            if trade.pair not in pair_dict:
-                pair_dict[trade.pair] = {"Trades": 0, "Profit": 0}
-            pair_dict[trade.pair]["Trades"] += 1
-            pair_dict[trade.pair]["Profit"] += trade.profit
+            if trade.instrument not in instruments:
+                instruments[trade.instrument] = {"Trades": 0, "Profit": 0}
+            instruments[trade.instrument]["Trades"] += 1
+            instruments[trade.instrument]["Profit"] += trade.profit
 
         trades_summary = ""
-        for key, val in pair_dict.items():
+        for key, val in instruments.items():
             trades_summary += (
                 f"•{key} -> {val['Trades']} trades, "
                 f"profit: <b>{val['Profit']:.2f}</b>\n"
@@ -128,7 +120,8 @@ class TelegramBot:
             if self.currency in currency_emoji else "💵"
 
         msg = (
-            f"📅 <b>Trades week {monday.date()} - {saturday.date()}</b>\n\n"
+            f"📅 <b>Trades week {monday_start.date()} - "
+            f"{friday.date()}</b>\n\n"
             f"{trades_summary}"
             f"\n🎯 Wins: {wins}, Losses: {losses}, WR: {win_ratio:.3f}\n"
             f"{curr_emoji} <b>Total profit: {total_pl:.2f} {self.currency}</b>"
@@ -144,16 +137,16 @@ class TelegramBot:
             return None
         return self._notify(text)
 
-    def daily_report(self) -> Union[requests.Response, None]:
+    def daily_report(self, day: datetime) -> Union[requests.Response, None]:
         if self.report_freq == "Weekly":
             return None
-        text = self._format_daily_report()
+        text = self._format_daily_report(day)
         if text == "":
             return None
         return self._notify(text)
 
-    def weekly_report(self) -> Union[requests.Response, None]:
-        text = self._format_weekly_report()
+    def weekly_report(self, day: datetime) -> Union[requests.Response, None]:
+        text = self._format_weekly_report(day)
         if text == "":
             return None
         return self._notify(text)

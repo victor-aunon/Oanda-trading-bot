@@ -43,6 +43,8 @@ ConfigType = TypedDict(
         "oanda_token": str,
         "oanda_account_id": str,
         "language_tts": Union[Literal["ES-ES"], Literal["EN-US"]],
+        "telegram_token": str,
+        "telegram_chat_id": str,
         "tts": bool
     },
     total=False,
