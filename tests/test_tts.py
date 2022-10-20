@@ -1,13 +1,23 @@
+# Locals
 from oandatradingbot.utils.tts import TTS
 
 
 def test_tts():
     tts = TTS()
-    assert tts.say("Testing") is None
+    tts.say("Testing")  # -> Should hear testing through speaker
 
-    # Testing a non-existent language
-    assert tts._set_language("klingon") is None
 
+def test_return_false_when_language_is_not_in_system():
+    tts = TTS()
+    assert tts._set_language("klingon") is False
+
+
+def test_return_true_when_language_is_in_system():
+    tts = TTS()
+    assert tts._set_language("EN-US") is True
+
+
+def test_driver_is_dummy():
     # Testing a non-existent driver
     tts = TTS(driver="non-existent driver")  # -> Fallback to dummy driver
-    assert tts.say("Testing") is None
+    assert "dummy" in tts.engine.getProperty("voice").id
