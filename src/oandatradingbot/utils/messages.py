@@ -1,3 +1,5 @@
+from typing import Optional
+
 
 class Messages:
     def __init__(self, language: str, account_currency: str) -> None:
@@ -11,7 +13,9 @@ class Messages:
             response = f"{pair} near BUY signal"
         return response
 
-    def buy_order_submitted(self, size: int, pair: str, id=None) -> str:
+    def buy_order_submitted(
+        self, size: int, pair: str, id: Optional[str] = None
+    ) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de COMPRA {abs(size)} {pair}"
@@ -24,7 +28,7 @@ class Messages:
             )
         return response
 
-    def buy_order_rejected(self, pair: str, id=None) -> str:
+    def buy_order_rejected(self, pair: str, id: Optional[str] = None) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de COMPRA {pair}"
@@ -38,7 +42,7 @@ class Messages:
         return response
 
     def buy_order_placed(
-        self, size: float, pair: str, price: float, id=None
+        self, size: float, pair: str, price: float, id: Optional[str] = None
     ) -> str:
         if self.lang == "ES-ES":
             response = (
@@ -52,7 +56,9 @@ class Messages:
             )
         return response
 
-    def buy_order_canceled(self, pair: str, amount: float, id=None) -> str:
+    def buy_order_canceled(
+        self, pair: str, amount: float, id: Optional[str] = None
+    ) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de COMPRA {pair}"
@@ -69,7 +75,9 @@ class Messages:
             )
         return response
 
-    def stop_buy_order(self, pair: str, amount: float, id=None) -> str:
+    def stop_buy_order(
+        self, pair: str, amount: float, id: Optional[str] = None
+    ) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de COMPRA {pair}"
@@ -86,7 +94,9 @@ class Messages:
             )
         return response
 
-    def limit_buy_order(self, pair: str, amount: float, id=None) -> str:
+    def limit_buy_order(
+        self, pair: str, amount: float, id: Optional[str] = None
+    ) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de COMPRA {pair}"
@@ -110,7 +120,9 @@ class Messages:
             response = f"{pair} near SELL signal"
         return response
 
-    def sell_order_submitted(self, size: int, pair: str, id=None) -> str:
+    def sell_order_submitted(
+        self, size: int, pair: str, id: Optional[str] = None
+    ) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de VENTA {abs(size)} {pair}"
@@ -123,7 +135,7 @@ class Messages:
             )
         return response
 
-    def sell_order_rejected(self, pair: str, id=None) -> str:
+    def sell_order_rejected(self, pair: str, id: Optional[str] = None) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de VENTA {pair}"
@@ -137,7 +149,7 @@ class Messages:
         return response
 
     def sell_order_placed(
-        self, size: float, pair: str, price: float, id=None
+        self, size: float, pair: str, price: float, id: Optional[str] = None
     ) -> str:
         if self.lang == "ES-ES":
             response = (
@@ -151,7 +163,9 @@ class Messages:
             )
         return response
 
-    def sell_order_canceled(self, pair: str, amount: float, id=None) -> str:
+    def sell_order_canceled(
+        self, pair: str, amount: float, id: Optional[str] = None
+    ) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de VENTA {pair}"
@@ -168,7 +182,9 @@ class Messages:
             )
         return response
 
-    def stop_sell_order(self, pair: str, amount: float, id=None) -> str:
+    def stop_sell_order(
+        self, pair: str, amount: float, id: Optional[str] = None
+    ) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de VENTA {pair}"
@@ -185,7 +201,9 @@ class Messages:
             )
         return response
 
-    def limit_sell_order(self, pair: str, amount: float, id=None) -> str:
+    def limit_sell_order(
+        self, pair: str, amount: float, id: Optional[str] = None
+    ) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de VENTA {pair}"
@@ -202,7 +220,7 @@ class Messages:
             )
         return response
 
-    def stop_order_accepted(self, pair: str, id=None) -> str:
+    def stop_order_accepted(self, pair: str, id: Optional[str] = None) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de STOP {pair}"
@@ -215,7 +233,7 @@ class Messages:
             )
         return response
 
-    def stop_order_replaced(self, pair: str, id=None) -> str:
+    def stop_order_replaced(self, pair: str, id: Optional[str] = None) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de STOP {pair}"
@@ -228,7 +246,7 @@ class Messages:
             )
         return response
 
-    def limit_order_accepted(self, pair: str, id=None) -> str:
+    def limit_order_accepted(self, pair: str, id: Optional[str] = None) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de LÍMITE {pair}"
@@ -241,7 +259,7 @@ class Messages:
             )
         return response
 
-    def limit_order_replaced(self, pair: str, id=None) -> str:
+    def limit_order_replaced(self, pair: str, id: Optional[str] = None) -> str:
         if self.lang == "ES-ES":
             response = (
                 f"Orden de LÍMITE {pair}"
