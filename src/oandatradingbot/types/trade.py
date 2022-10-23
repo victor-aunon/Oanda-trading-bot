@@ -45,6 +45,7 @@ TradeType = TypedDict(
         "SL (pips)": float,
         "TK": float,
         "TK (pips)": float,
+        "Canceled": bool,
         "PL": float,
     },
 )
