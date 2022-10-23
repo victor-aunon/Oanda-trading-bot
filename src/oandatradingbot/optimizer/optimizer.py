@@ -17,7 +17,6 @@ from oandatradingbot.utils.financial_feed import FinancialFeed
 from oandatradingbot.optimizer.summarizer_opt import Summarizer
 from oandatradingbot.types.config import ConfigType
 
-CRYPTOS = ["BTC", "BCH", "ETH", "LTC"]
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -87,22 +86,20 @@ def main(config_obj=None):
     variations: List[int] = []
     print("Parameters values:")
     for param in config["strategy_params"]:
-        param_dict = config[
-            "strategy_params"
-        ][param]
+        param_dict = config["strategy_params"][param]  # type: ignore
         if isinstance(param_dict, dict):
-            config[param] = np.arange(
+            config[param] = np.arange(  # type: ignore
                 param_dict["start"], param_dict["end"], param_dict["step"]
             )
-            print(f"    {param}: {config[param]}")
-            variations.append(len(config[param]))
+            print(f"    {param}: {config[param]}")  # type: ignore
+            variations.append(len(config[param]))  # type: ignore
         elif isinstance(param_dict, list):
-            config[param] = param_dict
-            print(f"    {param}: {config[param]}")
-            variations.append(len(config[param]))
+            config[param] = param_dict  # type: ignore
+            print(f"    {param}: {config[param]}")  # type: ignore
+            variations.append(len(config[param]))  # type: ignore
         else:
-            config[param] = param_dict
-            print(f"    {param}: {config[param]}")
+            config[param] = param_dict  # type: ignore
+            print(f"    {param}: {config[param]}")  # type: ignore
     print(f"Simulations: {np.prod(variations)}")
     print(f"Batches: {int(np.ceil(np.prod(variations) / cpu_count()))}\n")
     config.pop("strategy_params", None)
@@ -110,10 +107,9 @@ def main(config_obj=None):
     cerebro = bt.Cerebro(stdstats=False, optreturn=True)
 
     config["pairs"] = list(set(config["pairs"]))
-    for pair in config["pairs"]:  # type: ignore
-        market = "fx" if pair.split("_")[0] not in CRYPTOS else "crypto"
+    for pair in config["pairs"]:
         print(f"Downloading {pair} feed...")
-        feed = FinancialFeed(pair, market, config["interval"]).get_feed()
+        feed = FinancialFeed(pair, config["interval"]).get_feed()
         data = bt.feeds.PandasData(dataname=feed, name=pair)
 
         cerebro.resampledata(

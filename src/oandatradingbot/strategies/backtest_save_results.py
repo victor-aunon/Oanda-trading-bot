@@ -15,9 +15,9 @@ from oandatradingbot.types.trade import TradeType
 
 
 class SaveResults:
-    def __init__(self, config: ConfigType) -> None:
+    def __init__(self, config: ConfigType, profit_risk_ratio: float) -> None:
         self.path = config["results_path"]
-        self.profit_risk_ratio = config["profit_risk_ratio"]
+        self.profit_risk_ratio = profit_risk_ratio
         self.account_currency = config["account_currency"]
 
     def _create_optimization_folder(self, optimization_name: str) -> None:

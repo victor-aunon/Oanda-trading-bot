@@ -17,15 +17,16 @@ class BaseBackTestStrategy(bt.Strategy):
 
     def __init__(self, **kwargs) -> None:
         super().__init__()
-        self.config: ConfigType = kwargs["config"]
+        self.config: ConfigType = kwargs \
+            if kwargs["optimize"] else kwargs["config"]
         self.optimize = self.config["optimize"]
         self._check_config()
-        self.pairs: List[str] = [p for p in kwargs["pairs"]] if self.optimize \
-            else kwargs["pairs"]
-        self.account_currency: str = kwargs["account_currency"]
+        self.pairs: List[str] = [p for p in self.config["pairs"]] \
+            if self.optimize else self.config["pairs"]
+        self.account_currency: str = self.config["account_currency"]
         # Attributes that do not require dictionaries
         self.messages = Messages(
-            self.config["language"], kwargs["account_currency"]
+            self.config["language"], self.config["account_currency"]
         )
         self.order_manager = OrderManagerBackTest(
             self.messages,
@@ -33,7 +34,7 @@ class BaseBackTestStrategy(bt.Strategy):
             self.p.profit_risk_ratio,
             self.broker
         )
-        self.save_results = SaveResults(self.config)
+        self.save_results = SaveResults(self.config, self.p.profit_risk_ratio)
         self.initialize_dicts()
 
     @staticmethod
