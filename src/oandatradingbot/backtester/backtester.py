@@ -43,7 +43,7 @@ def parse_args(pargs=None):
     return parser.parse_args(pargs)
 
 
-def main(config_obj=None, testing=False):
+def main(config_obj=None):
     print("====== Starting backtrader ======")
     args = parse_args()
 
@@ -56,7 +56,8 @@ def main(config_obj=None, testing=False):
 
     config["debug"] = args.debug
     config["optimize"] = False
-    config["testing"] = testing
+    if "testing" not in config:
+        config["testing"] = False
 
     if config["results_path"] == "the path where results will be saved":
         print("ERROR: Change the name of the results_path before backtesting")

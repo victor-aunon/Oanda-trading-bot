@@ -20,6 +20,7 @@ config: ConfigType = {
     "timeframe_num": 5,
     "timeframe": "Minutes",
     "interval": "5m",
+    "testing": True,
     "strategy_params": {
         "macd_fast_ema": 5,
         "macd_slow_ema": 26,
@@ -34,7 +35,7 @@ config: ConfigType = {
 
 def test_backtester():
 
-    main(config, testing=True)
+    main(config)
     for file in os.listdir(os.path.join(current_dir, "results")):
         if file.endswith(".png"):
             # Check that there is a png file (the backtest figure)
