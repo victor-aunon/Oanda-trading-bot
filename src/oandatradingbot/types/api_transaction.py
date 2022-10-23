@@ -18,3 +18,17 @@ ApiTransactionType = TypedDict(
         "time": str,
     },
 )
+
+empty_transaction: ApiTransactionType = {
+    "type": "",
+    "reason": "",
+    "tradeID": "",
+    "orderID": "",
+    "id": "",
+    "tradesClosed": [{"none": ""}],
+    "units": "",
+    "price": "",
+    "instrument": "",
+    "pl": "",
+    "time": "",
+}

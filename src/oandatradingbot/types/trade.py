@@ -2,6 +2,16 @@
 from datetime import datetime
 from typing import Literal, TypedDict
 
+TradeRegistryValuesType = TypedDict(
+    "TradeRegistryValuesType",
+    {
+        "pair": str,
+        "op_type": Literal["BUY", "SELL"]
+    }
+)
+
+TradeRegistryType = dict[str, TradeRegistryValuesType]
+
 TradeDbType = TypedDict(
     "TradeDbType",
     {

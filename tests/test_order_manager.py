@@ -5,11 +5,8 @@ from datetime import datetime
 # Local
 from oandatradingbot.types.api_transaction import ApiTransactionType
 from oandatradingbot.types.config import ConfigType
-from oandatradingbot.utils.instrument_manager import InstrumentManager
-from oandatradingbot.utils.messages import Messages
 from oandatradingbot.utils.order_manager import OrderManager
 from oandatradingbot.utils.telegram_bot import TelegramBot
-from oandatradingbot.utils.tts import TTS
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,9 +15,14 @@ config: ConfigType = {
     "oanda_token": os.environ["oanda_token"],
     "oanda_account_id": os.environ["oanda_account_id"],
     "practice": True,
+    "language": "EN-US",
     "pairs": ["EUR_NZD"],
+    "account_currency": "EUR",
+    "account_type": "Demo",
+    "tts": True,
     "telegram_token": os.environ["telegram_token"],
     "telegram_chat_id": os.environ["telegram_chat_id"],
+    "telegram_report_frequency": "Trade"
 }
 
 
@@ -46,29 +48,19 @@ class Transaction:
             "units": self.units,
             "price": "1.1515",
             "instrument": config["pairs"][0],
-            "pl": "20.50",
+            "pl": "-20.50" if self.reason == "STOP_LOSS_ORDER" else "20.50",
             "time": str(datetime.now().timestamp())
         }
 
 
 def test_recover_orders():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    om = OrderManager(config)
 
-    assert om.recover_orders() is None
+    assert om.recover_orders() == 0
 
 
 def test_buy_order_rejected():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    om = OrderManager(config)
 
     # Testing order submitted and rejected: stop loss on fill loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "1", "4000").dict
@@ -80,18 +72,8 @@ def test_buy_order_rejected():
 
 
 def test_buy_order_stop_loss():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    tb = TelegramBot(
-        config["telegram_token"],
-        config["telegram_chat_id"],
-        config["database_uri"],
-        "EUR", "Trade"
-    )
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts, tb
-    )
+    tb = TelegramBot(config)
+    om = OrderManager(config, tb)
 
     # Testing exiting by stop loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "2", "4000").dict
@@ -116,12 +98,8 @@ def test_buy_order_stop_loss():
 
 
 def test_buy_order_take_profit():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    tb = TelegramBot(config)
+    om = OrderManager(config, tb)
 
     # Testing exiting by take profit
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "4", "4000").dict
@@ -146,12 +124,8 @@ def test_buy_order_take_profit():
 
 
 def test_cancel_buy_order():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    tb = TelegramBot(config)
+    om = OrderManager(config, tb)
 
     # Testing market order canceled
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "6", "4000").dict
@@ -177,12 +151,7 @@ def test_cancel_buy_order():
 
 
 def test_sell_order_rejected():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    om = OrderManager(config)
 
     # Testing order submitted and rejected: stop loss on fill loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "8", "-4000").dict
@@ -194,12 +163,8 @@ def test_sell_order_rejected():
 
 
 def test_sell_order_stop_loss():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    tb = TelegramBot(config)
+    om = OrderManager(config, tb)
 
     # Testing exiting by stop loss
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "9", "-4000").dict
@@ -224,12 +189,8 @@ def test_sell_order_stop_loss():
 
 
 def test_sell_order_take_profit():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    tb = TelegramBot(config)
+    om = OrderManager(config, tb)
 
     # Testing exiting by take profit
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "11", "-4000").dict
@@ -254,12 +215,8 @@ def test_sell_order_take_profit():
 
 
 def test_cancel_sell_order():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    tb = TelegramBot(config)
+    om = OrderManager(config, tb)
 
     # Testing market order canceled
     trans = Transaction("MARKET_ORDER", "CLIENT_ORDER", "13", "-4000").dict
@@ -285,12 +242,7 @@ def test_cancel_sell_order():
 
 
 def test_other_order():
-    messages = Messages("EN-US", "EUR")
-    tts = TTS("EN-US")
-    im = InstrumentManager(config)
-    om = OrderManager(
-        messages, config["database_uri"], im, "Demo", config["pairs"], tts
-    )
+    om = OrderManager(config)
 
     # Skipping some other type/reason
     trans = Transaction("OTHER_TYPE", "OTHER_REASON", "99", "4000").dict
