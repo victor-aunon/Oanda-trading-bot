@@ -19,7 +19,7 @@
 # Oanda trading bot
 
 This is a trading bot intended to trade forex and crytocurrencies CFD contracts
-within the OANDA trading platform. It is based on the [Backtrader](https://www.backtrader.com/) python trading library, but it makes use of the OANDA API to deal with orders and trades.
+within the OANDA trading platform. It is based on the [Backtrader](https://www.backtrader.com/) python trading library, but it makes use of the OANDA API to deal with orders and trades. **Python 3.9** is required to run the bot.
 
 ## Strategy description
 
