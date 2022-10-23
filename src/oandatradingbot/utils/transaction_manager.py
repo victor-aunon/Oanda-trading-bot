@@ -1,6 +1,6 @@
 # Libraries
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Dict, Literal, Optional
 
 # Locals
 from oandatradingbot.repository.repository import Repository
@@ -14,7 +14,7 @@ from oandatradingbot.utils.messages import Messages
 from oandatradingbot.utils.telegram_bot import TelegramBot
 from oandatradingbot.utils.tts import TTS
 
-IsBuyedSelledType = dict[OperationType, dict[str, bool]]
+IsBuyedSelledType = Dict[OperationType, Dict[str, bool]]
 ExitType = Literal["TK", "SL", "CANCEL"]
 
 

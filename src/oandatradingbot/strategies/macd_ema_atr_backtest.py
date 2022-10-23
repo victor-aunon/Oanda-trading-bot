@@ -1,3 +1,6 @@
+# Libraries
+from typing import Dict
+
 # Packages
 from backtrader.indicators.atr import AverageTrueRange as ATR
 from backtrader.indicators.ema import ExponentialMovingAverage as EMA
@@ -39,11 +42,11 @@ class MacdEmaAtrBackTest(BaseBackTestStrategy):
 
     def initialize_dicts(self) -> None:
         # Dictionaries whose keys are the fx instruments
-        self.data: dict[str, LineIterator] = {}
-        self.macd: dict[str, Indicator] = {}
-        self.ema: dict[str, Indicator] = {}
-        self.atr: dict[str, Indicator] = {}
-        self.data_ready: dict[str, bool] = {}
+        self.data: Dict[str, LineIterator] = {}
+        self.macd: Dict[str, Indicator] = {}
+        self.ema: Dict[str, Indicator] = {}
+        self.atr: Dict[str, Indicator] = {}
+        self.data_ready: Dict[str, bool] = {}
         # Fill the previous dictionaries
         for instrument in self.instruments:
             # Indicators

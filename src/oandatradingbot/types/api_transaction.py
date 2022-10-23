@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from typing_extensions import TypedDict
 
 
@@ -10,7 +10,7 @@ ApiTransactionType = TypedDict(
         "tradeID": str,
         "orderID": str,
         "id": str,
-        "tradesClosed": List[dict[str, str]],
+        "tradesClosed": List[Dict[str, str]],
         "units": str,
         "price": str,
         "instrument": str,

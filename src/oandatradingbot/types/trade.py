@@ -1,6 +1,6 @@
 # Libraries
 from datetime import datetime
-from typing import Literal, TypedDict
+from typing import Dict, Literal, TypedDict
 
 TradeRegistryValuesType = TypedDict(
     "TradeRegistryValuesType",
@@ -10,7 +10,7 @@ TradeRegistryValuesType = TypedDict(
     }
 )
 
-TradeRegistryType = dict[str, TradeRegistryValuesType]
+TradeRegistryType = Dict[str, TradeRegistryValuesType]
 
 TradeDbType = TypedDict(
     "TradeDbType",

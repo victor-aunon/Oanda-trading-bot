@@ -11,7 +11,7 @@ from oandatradingbot.types.trade import TradeType
 from oandatradingbot.utils.instrument_units import PIP_UNITS
 from oandatradingbot.utils.messages import Messages
 
-IsBuyOrSellType = dict[str, Literal["BUY", "SELL"]]
+IsBuyOrSellType = Dict[str, Literal["BUY", "SELL"]]
 
 
 class OrderManagerBackTest:

@@ -2,7 +2,7 @@
 import ast
 from datetime import datetime, time
 from pprint import pprint
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 # Packages
 import backtrader as bt
@@ -111,7 +111,7 @@ class BaseStrategy(bt.Strategy):
 
     def notify_store(
         self,
-        msg: Union[dict[str, str], str],
+        msg: Union[Dict[str, str], str],
         *args,
         **kwargs
     ) -> None:

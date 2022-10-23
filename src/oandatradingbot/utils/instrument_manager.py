@@ -1,5 +1,5 @@
 # Libraries
-from typing import List
+from typing import Dict, List
 
 # Packages
 import requests
@@ -21,7 +21,7 @@ class InstrumentManager:
         self._get_instrument_units(config["instruments"])
 
     def _get_instrument_units(self, instruments: List[str]) -> None:
-        units: dict[str, float] = {}
+        units: Dict[str, float] = {}
 
         response = requests.get(
             f"{self.url}/v3/accounts/{self.account_id}/instruments",

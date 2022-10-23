@@ -1,5 +1,5 @@
 # Libraries
-from typing import Literal, TypedDict, Union
+from typing import Dict, Literal, TypedDict, Union
 
 # Packages
 from backtrader import Order
@@ -22,8 +22,8 @@ OrderType = TypedDict(
 OrdersType = TypedDict(
     "OrdersType",
     {
-        "BUY": dict[str, OrderType],
-        "SELL": dict[str, OrderType]
+        "BUY": Dict[str, OrderType],
+        "SELL": Dict[str, OrderType]
     }
 )
 
@@ -57,7 +57,7 @@ OrderBTType = TypedDict(
 OrdersBTType = TypedDict(
     "OrdersBTType",
     {
-        "BUY": dict[str, OrderBTType],
-        "SELL": dict[str, OrderBTType]
+        "BUY": Dict[str, OrderBTType],
+        "SELL": Dict[str, OrderBTType]
     }
 )

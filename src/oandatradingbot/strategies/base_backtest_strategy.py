@@ -1,6 +1,6 @@
 # Libraries
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 # Packages
 import backtrader as bt
@@ -69,7 +69,7 @@ class BaseBackTestStrategy(bt.Strategy):
 
     def notify_store(
         self,
-        msg: Union[dict[str, str], str],
+        msg: Union[Dict[str, str], str],
         *args,
         **kwargs
     ) -> None:

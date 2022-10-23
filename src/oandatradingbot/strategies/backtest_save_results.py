@@ -39,7 +39,7 @@ class SaveResults:
     ) -> None:
         self._create_optimization_folder(optimization_name)
 
-        pl_stats: dict[str, Union[int, float]] = {
+        pl_stats: Dict[str, Union[int, float]] = {
             "Trades": 0,
             "Won": 0,
             "Lost": 0,
