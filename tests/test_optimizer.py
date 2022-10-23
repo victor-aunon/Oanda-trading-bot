@@ -35,8 +35,8 @@ config = {
 def test_optimizer():
 
     main(config)
-    strategies = None
-    opt_name = None
+    strategies = []
+    opt_name = ""
     for root, folders, files in os.walk(os.path.join(current_dir, "results")):
         for file in files:
             print(file)
