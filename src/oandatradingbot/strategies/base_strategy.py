@@ -31,7 +31,11 @@ class BaseStrategy(bt.Strategy):
             self.config["language"], self.config["account_currency"]
         )
         if self.config["tts"]:
-            self.tts = TTS(self.config["language_tts"], 120)
+            self.tts = TTS(
+                self.config["language_tts"] if "language_tts" in self.config
+                else "EN-US",
+                120
+            )
         self.instrument_manager = InstrumentManager(self.config)
         # Create TelegramBot instance if the bot is reachable
         if "telegram_token" in self.config:
@@ -51,15 +55,9 @@ class BaseStrategy(bt.Strategy):
             weekdays=[] if self.testing else [5],
             timername="session_close"
         )
-
         self.order_manager = OrderManager(
-            self.messages,
-            self.config["database_uri"],
-            self.instrument_manager,
-            self.account_type,
-            self.pairs,
-            self.tts if self.config["tts"] else None,
-            self.telegram_bot if "telegram_token" in self.config else None,
+            self.config,
+            self.telegram_bot if hasattr(self, "telegram_bot") else None,
         )
         self.initialize_dicts()
 
