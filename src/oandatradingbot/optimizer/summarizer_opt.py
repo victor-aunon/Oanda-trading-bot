@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 class Summarizer:
     def __init__(self, config: ConfigType) -> None:
         self.strat_files = []
-        self.instruments = config["pairs"][0]
+        self.instruments = config["instruments"][0]
         self.results_path = config["results_path"]
         self.initial_cash = config["cash"]
         self.currency = config["account_currency"]

@@ -18,7 +18,7 @@ class InstrumentManager:
         self.token = config["oanda_token"]
         self.account_id = config["oanda_account_id"]
         self.url = practice_url if self.account_type else prod_url
-        self._get_instrument_units(config["pairs"])
+        self._get_instrument_units(config["instruments"])
 
     def _get_instrument_units(self, instruments: List[str]) -> None:
         units: dict[str, float] = {}

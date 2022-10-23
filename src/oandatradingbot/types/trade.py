@@ -5,7 +5,7 @@ from typing import Literal, TypedDict
 TradeRegistryValuesType = TypedDict(
     "TradeRegistryValuesType",
     {
-        "pair": str,
+        "instrument": str,
         "op_type": Literal["BUY", "SELL"]
     }
 )

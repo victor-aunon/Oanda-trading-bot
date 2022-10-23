@@ -62,8 +62,8 @@ def main(config_obj=None) -> None:
     config["debug"] = args.debug
     if "testing" not in config:
         config["testing"] = False
-    # Check there are no repeated pairs
-    config["pairs"] = list(set(config["pairs"]))
+    # Check there are no repeated instruments
+    config["instruments"] = list(set(config["instruments"]))
 
     # Instantiate cerebro
     cerebro = bt.Cerebro()
@@ -82,9 +82,9 @@ def main(config_obj=None) -> None:
         config[param] = p  # type: ignore[literal-required]
     config.pop("strategy_params", None)
 
-    for pair in config["pairs"]:
+    for instrument in config["instruments"]:
         data = store.getdata(
-            dataname=pair,
+            dataname=instrument,
             timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
             compression=config["timeframe_num"]
             # qcheck=20,  # Increase qcheck (0.5 def) to ensure candles every
@@ -92,7 +92,7 @@ def main(config_obj=None) -> None:
         )
         cerebro.resampledata(
             data,
-            name=pair,
+            name=instrument,
             timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
             compression=config["timeframe_num"],
         )

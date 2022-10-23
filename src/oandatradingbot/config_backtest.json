@@ -1,6 +1,6 @@
 {
     "results_path": "the path where results will be saved",
-    "pairs": ["EUR_USD"],
+    "instruments": ["EUR_USD"],
     "cash": 10000,
     "risk": 1,
     "account_currency": "EUR",

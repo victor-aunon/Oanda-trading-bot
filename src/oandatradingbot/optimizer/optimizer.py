@@ -106,15 +106,15 @@ def main(config_obj=None):
 
     cerebro = bt.Cerebro(stdstats=False, optreturn=True)
 
-    config["pairs"] = list(set(config["pairs"]))
-    for pair in config["pairs"]:
-        print(f"Downloading {pair} feed...")
-        feed = FinancialFeed(pair, config["interval"]).get_feed()
-        data = bt.feeds.PandasData(dataname=feed, name=pair)
+    config["instruments"] = list(set(config["instruments"]))
+    for instrument in config["instruments"]:
+        print(f"Downloading {instrument} feed...")
+        feed = FinancialFeed(instrument, config["interval"]).get_feed()
+        data = bt.feeds.PandasData(dataname=feed, name=instrument)
 
         cerebro.resampledata(
             data,
-            name=pair,
+            name=instrument,
             timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
             compression=config["timeframe_num"],
         )
@@ -124,7 +124,7 @@ def main(config_obj=None):
     # and SL and TK calculation are messed up
     cerebro.broker.set_coc(True)
 
-    config["pairs"] = [config["pairs"]]  # type: ignore
+    config["instruments"] = [config["instruments"]]  # type: ignore
     cerebro.optstrategy(MacdEmaAtrBackTest, **config)
 
     print("Running backtests...")

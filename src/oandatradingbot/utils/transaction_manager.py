@@ -92,69 +92,69 @@ class TransactionManager:
             self.telegram_bot.notify_trade(int(main_order["MK"]["id"]))
 
     def market_order_submitted(self, transaction: ApiTransactionType) -> str:
-        pair = transaction["instrument"]
+        instrument = transaction["instrument"]
         op_type: OperationType = "BUY" \
             if float(transaction["units"]) > 0 else "SELL"
         self.trades_registry[transaction["id"]] = {
-            "pair": pair, "op_type": op_type
+            "instrument": instrument, "op_type": op_type
         }
         if op_type == "BUY":
             return self.messages.buy_order_submitted(
                 int(float(transaction["units"])),
-                f"{' '.join(pair.split('_'))}",
+                f"{' '.join(instrument.split('_'))}",
                 transaction["id"]
             )
         elif op_type == "SELL":
             return self.messages.sell_order_submitted(
                 int(float(transaction["units"])),
-                f"{' '.join(pair.split('_'))}",
+                f"{' '.join(instrument.split('_'))}",
                 transaction["id"]
             )
 
     def market_order_rejected(self, transaction: ApiTransactionType) -> str:
         if transaction["orderID"] not in self.trades_registry:
             return ""
-        pair = self.trades_registry[transaction["orderID"]]["pair"]
+        instrument = self.trades_registry[transaction["orderID"]]["instrument"]
         op_type = self.trades_registry[transaction["orderID"]]["op_type"]
 
         if op_type == "BUY":
             self.trades_registry.pop(transaction["orderID"], None)
             return self.messages.buy_order_rejected(
-                f"{' '.join(pair.split('_'))}",
+                f"{' '.join(instrument.split('_'))}",
                 transaction["orderID"]
             )
         elif op_type == "SELL":
             self.trades_registry.pop(transaction["orderID"], None)
             return self.messages.sell_order_rejected(
-                f"{' '.join(pair.split('_'))}",
+                f"{' '.join(instrument.split('_'))}",
                 transaction["orderID"]
             )
 
     def register_market_order(self, transaction: ApiTransactionType) -> str:
-        pair = transaction["instrument"]
-        # Remove any canceled trade with this pair
+        instrument = transaction["instrument"]
+        # Remove any canceled trade with this instrument
         for key, val in list(self.trades_registry.items()):
-            if val["pair"] == pair:
+            if val["instrument"] == instrument:
                 self.trades_registry.pop(key, None)
         op_type: OperationType = "BUY" if float(transaction["units"]) > 0 \
             else "SELL"
 
-        self.orders[op_type][pair]["MK"] = transaction
-        self.is_buyed_selled[op_type][pair] = True
+        self.orders[op_type][instrument]["MK"] = transaction
+        self.is_buyed_selled[op_type][instrument] = True
         self.trades_registry[transaction["id"]] = {
-            "pair": pair, "op_type": op_type
+            "instrument": instrument, "op_type": op_type
         }
         if op_type == "BUY":
             message = self.messages.buy_order_placed(
                 int(float(transaction["units"])),
-                f"{' '.join(pair.split('_'))}",
+                f"{' '.join(instrument.split('_'))}",
                 float(transaction["price"]),
                 transaction["id"]
             )
         elif op_type == "SELL":
             message = self.messages.sell_order_placed(
                 int(float(transaction["units"])),
-                f"{' '.join(pair.split('_'))}",
+                f"{' '.join(instrument.split('_'))}",
                 float(transaction["price"]),
                 transaction["id"]
             )
@@ -165,68 +165,76 @@ class TransactionManager:
     def register_take_profit_order(
         self, transaction: ApiTransactionType
     ) -> str:
-        pair = self.trades_registry[transaction["tradeID"]]["pair"]
+        instrument = self.trades_registry[transaction["tradeID"]]["instrument"]
         op_type = self.trades_registry[transaction["tradeID"]]["op_type"]
 
-        self.orders[op_type][pair]["TK"] = transaction
-        return self.messages.limit_order_accepted(pair, transaction["tradeID"])
+        self.orders[op_type][instrument]["TK"] = transaction
+        return self.messages.limit_order_accepted(
+            instrument, transaction["tradeID"]
+        )
 
     def replace_take_profit_order(
         self, transaction: ApiTransactionType
     ) -> str:
-        pair = self.trades_registry[transaction["tradeID"]]["pair"]
+        instrument = self.trades_registry[transaction["tradeID"]]["instrument"]
         op_type = self.trades_registry[transaction["tradeID"]]["op_type"]
 
-        self.orders[op_type][pair]["TK"]["price"] = transaction["price"]
-        self.orders[op_type][pair]["TK"]["time"] = transaction["time"]
-        return self.messages.limit_order_replaced(pair, transaction["tradeID"])
+        self.orders[op_type][instrument]["TK"]["price"] = transaction["price"]
+        self.orders[op_type][instrument]["TK"]["time"] = transaction["time"]
+        return self.messages.limit_order_replaced(
+            instrument, transaction["tradeID"]
+        )
 
     def register_stop_loss_order(
         self, transaction: ApiTransactionType
     ) -> str:
-        pair = self.trades_registry[transaction["tradeID"]]["pair"]
+        instrument = self.trades_registry[transaction["tradeID"]]["instrument"]
         op_type = self.trades_registry[transaction["tradeID"]]["op_type"]
 
-        self.orders[op_type][pair]["SL"] = transaction
-        return self.messages.stop_order_accepted(pair, transaction["tradeID"])
+        self.orders[op_type][instrument]["SL"] = transaction
+        return self.messages.stop_order_accepted(
+            instrument, transaction["tradeID"]
+        )
 
     def replace_stop_loss_order(
         self, transaction: ApiTransactionType
     ) -> str:
-        pair = self.trades_registry[transaction["tradeID"]]["pair"]
+        instrument = self.trades_registry[transaction["tradeID"]]["instrument"]
         op_type = self.trades_registry[transaction["tradeID"]]["op_type"]
 
-        self.orders[op_type][pair]["SL"]["price"] = transaction["price"]
-        self.orders[op_type][pair]["SL"]["time"] = transaction["time"]
-        return self.messages.stop_order_replaced(pair, transaction["tradeID"])
+        self.orders[op_type][instrument]["SL"]["price"] = transaction["price"]
+        self.orders[op_type][instrument]["SL"]["time"] = transaction["time"]
+        return self.messages.stop_order_replaced(
+            instrument, transaction["tradeID"]
+        )
 
     def take_profit_order_completed(
         self, transaction: ApiTransactionType
     ) -> str:
-        pair = transaction["instrument"]
+        instrument = transaction["instrument"]
         this_trade_id = transaction["tradesClosed"][0]["tradeID"]
 
         # Units negative since closing a buy order means a sell order
         op_type: OperationType = "BUY" if float(transaction["units"]) < 0 \
             else "SELL"
-        trade_id = self.orders[op_type][pair]["MK"]["id"]
+        trade_id = self.orders[op_type][instrument]["MK"]["id"]
         if this_trade_id != trade_id:
             return ""
 
-        self.orders[op_type][pair]["TK"] = transaction
-        self._save_trade_in_repository(op_type, "TK", pair)
+        self.orders[op_type][instrument]["TK"] = transaction
+        self._save_trade_in_repository(op_type, "TK", instrument)
         profit = float(transaction["pl"])
-        self._reset_instrument_order(op_type, pair)
+        self._reset_instrument_order(op_type, instrument)
         # Remove this trade from trades_registry since it is completed
         self.trades_registry.pop(this_trade_id, None)
-        self.is_buyed_selled[op_type][pair] = False
+        self.is_buyed_selled[op_type][instrument] = False
         if op_type == "BUY":
             message = self.messages.limit_buy_order(
-                f"{' '.join(pair.split('_'))}", profit, this_trade_id
+                f"{' '.join(instrument.split('_'))}", profit, this_trade_id
             )
         elif op_type == "SELL":
             message = self.messages.limit_sell_order(
-                f"{' '.join(pair.split('_'))}", profit, this_trade_id
+                f"{' '.join(instrument.split('_'))}", profit, this_trade_id
             )
         if hasattr(self, "tts"):
             self.tts.say(message)
@@ -235,60 +243,60 @@ class TransactionManager:
     def stop_loss_order_completed(
         self, transaction: ApiTransactionType
     ) -> str:
-        pair = transaction["instrument"]
+        instrument = transaction["instrument"]
         this_trade_id = transaction["tradesClosed"][0]["tradeID"]
 
         # Units negative since closing a buy order means a sell order
         op_type: OperationType = "BUY" if float(transaction["units"]) < 0 \
             else "SELL"
-        trade_id = self.orders[op_type][pair]["MK"]["id"]
+        trade_id = self.orders[op_type][instrument]["MK"]["id"]
         if this_trade_id != trade_id:
             return ""
 
-        self.orders[op_type][pair]["SL"] = transaction
-        self._save_trade_in_repository(op_type, "SL", pair)
+        self.orders[op_type][instrument]["SL"] = transaction
+        self._save_trade_in_repository(op_type, "SL", instrument)
         profit = float(transaction["pl"])
-        self._reset_instrument_order(op_type, pair)
+        self._reset_instrument_order(op_type, instrument)
         # Remove this trade from trades_registry since it is completed
         self.trades_registry.pop(this_trade_id, None)
-        self.is_buyed_selled[op_type][pair] = False
+        self.is_buyed_selled[op_type][instrument] = False
         if op_type == "BUY":
             message = self.messages.stop_buy_order(
-                f"{' '.join(pair.split('_'))}", profit, this_trade_id
+                f"{' '.join(instrument.split('_'))}", profit, this_trade_id
             )
         elif op_type == "SELL":
             message = self.messages.stop_sell_order(
-                f"{' '.join(pair.split('_'))}", profit, this_trade_id
+                f"{' '.join(instrument.split('_'))}", profit, this_trade_id
             )
         if hasattr(self, "tts"):
             self.tts.say(message)
         return message
 
     def market_order_canceled(self, transaction: ApiTransactionType) -> str:
-        pair = transaction["instrument"]
+        instrument = transaction["instrument"]
         this_trade_id = transaction["tradesClosed"][0]["tradeID"]
 
         # Units negative since closing a buy order means a sell order
         op_type: OperationType = "BUY" if float(transaction["units"]) < 0 \
             else "SELL"
-        trade_id = self.orders[op_type][pair]["MK"]["id"]
+        trade_id = self.orders[op_type][instrument]["MK"]["id"]
         if this_trade_id != trade_id:
             return ""
 
-        self.orders[op_type][pair]["CANCEL"] = transaction
-        self._save_trade_in_repository(op_type, "CANCEL", pair)
+        self.orders[op_type][instrument]["CANCEL"] = transaction
+        self._save_trade_in_repository(op_type, "CANCEL", instrument)
         profit = float(transaction["pl"])
-        self._reset_instrument_order(op_type, pair)
+        self._reset_instrument_order(op_type, instrument)
         # Remove this trade from trades_registry since it is completed
         self.trades_registry.pop(this_trade_id, None)
-        self.is_buyed_selled[op_type][pair] = False
+        self.is_buyed_selled[op_type][instrument] = False
         if op_type == "BUY":
             message = self.messages.buy_order_canceled(
-                f"{' '.join(pair.split('_'))}", profit, this_trade_id
+                f"{' '.join(instrument.split('_'))}", profit, this_trade_id
             )
         elif op_type == "SELL":
             message = self.messages.sell_order_canceled(
-                f"{' '.join(pair.split('_'))}", profit, this_trade_id
+                f"{' '.join(instrument.split('_'))}", profit, this_trade_id
             )
         if hasattr(self, "tts"):
             self.tts.say(message)

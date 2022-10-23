@@ -23,7 +23,7 @@ class BaseStrategy(bt.Strategy):
         super().__init__()
         self.config: ConfigType = kwargs["config"]
         self._check_config()
-        self.pairs: List[str] = self.config["pairs"]
+        self.instruments: List[str] = self.config["instruments"]
         self.account_type: str = self.config["account_type"]
         self.account_currency: str = self.config["account_currency"]
         self.testing: bool = self.config["testing"]
@@ -103,11 +103,11 @@ class BaseStrategy(bt.Strategy):
 
     def notify_data(self, data: bt.DataBase, status: str) -> None:
         self.log(f"Data status: {data._name} -> {data._getstatusname(status)}")
-        for pair in self.pairs:
-            if data._name == pair and status == data.LIVE:
-                self.data_ready[pair] = True
-            elif data._name == pair and status != data.LIVE:
-                self.data_ready[pair] = False
+        for instrument in self.instruments:
+            if data._name == instrument and status == data.LIVE:
+                self.data_ready[instrument] = True
+            elif data._name == instrument and status != data.LIVE:
+                self.data_ready[instrument] = False
 
     def notify_store(
         self,
@@ -138,46 +138,48 @@ class BaseStrategy(bt.Strategy):
             self.order_manager.cancel_pending_trades()
 
     def next(self) -> None:
-        # Iterate over each currency pair since data is a list of feeds named
-        # by each pair
-        for pair in self.pairs:
+        # Iterate over each currency instrument since data
+        # is a list of feeds named by each instrument
+        for instrument in self.instruments:
             # Only do operations if the data is ready (LIVE)
-            if not self.data_ready[pair]:
+            if not self.data_ready[instrument]:
                 return
 
             # Log the closing price
-            # timestamp = self.data[pair].datetime.datetime(0)
-            close: float = self.data[pair].close[0]
-            text = f"{pair} - {close}"
+            # timestamp = self.data[instrument].datetime.datetime(0)
+            close: float = self.data[instrument].close[0]
+            text = f"{instrument} - {close}"
             if self.config["debug"]:
                 self.log(text)
 
             # Check if a buy order could be opened
-            if not self.order_manager.has_buyed(pair):
-                if self.near_buy_signal(pair):
-                    self.log(self.messages.near_buy_signal(pair))
+            if not self.order_manager.has_buyed(instrument):
+                if self.near_buy_signal(instrument):
+                    self.log(self.messages.near_buy_signal(instrument))
                     if self.config["tts"]:
                         self.tts.say(
                             self.messages.near_buy_signal(
-                                f"{' '.join(pair.split('_'))}"
+                                f"{' '.join(instrument.split('_'))}"
                             )
                         )
-                if self.enter_buy_signal(pair) and not self.testing:
+                if self.enter_buy_signal(instrument) and not self.testing:
                     # Calculate SL and TK based on ATR and Profit/Risk ratio
-                    units = self.instrument_manager.get_units(pair)
-                    stop_loss = self.get_stop_loss(pair)
+                    units = self.instrument_manager.get_units(instrument)
+                    stop_loss = self.get_stop_loss(instrument)
                     s_l_pips = stop_loss * units
-                    take_profit = self.get_take_profit(pair)
+                    take_profit = self.get_take_profit(instrument)
 
                     # Calculate lot size
                     size: float = self.getsizer().getsizing(
-                        self.data[pair],
+                        self.data[instrument],
                         isbuy=True,
                         pips=s_l_pips / self.broker.o.get_leverage(),
                     )
 
                     # Get the current ask price and calculate SL and TK
-                    ask_price = self.instrument_manager.get_ask_price(pair)
+                    ask_price = self.instrument_manager.get_ask_price(
+                        instrument
+                    )
                     diff = ask_price - close
                     sl_price = ask_price - diff - stop_loss
                     tk_price = ask_price - diff + take_profit
@@ -185,9 +187,9 @@ class BaseStrategy(bt.Strategy):
                     if self.config["debug"]:
                         self.log(
                             (
-                                f"Pair: {pair} - Close: {close} - "
+                                f"Instrument: {instrument} - Close: {close} - "
                                 f"Ask: {(ask_price):.5f} - "
-                                f"ATR: {self.atr[pair].atr[0]:.4f} - "
+                                f"ATR: {self.atr[instrument].atr[0]:.4f} - "
                                 f"SL (pips): {s_l_pips:.2f} - TK (pips): "
                                 f"{(take_profit * units):.2f} - "
                                 f"SL price: {sl_price:.5f} - "
@@ -198,7 +200,7 @@ class BaseStrategy(bt.Strategy):
 
                     # Create bracket order
                     self.buy_bracket(
-                        data=self.data[pair],
+                        data=self.data[instrument],
                         size=size,
                         exectype=bt.Order.Market,
                         stopprice=sl_price,
@@ -208,31 +210,33 @@ class BaseStrategy(bt.Strategy):
                     )
 
             # Check if a sell order could be opened
-            if not self.order_manager.has_selled(pair):
-                if self.near_sell_signal(pair):
-                    self.log(self.messages.near_sell_signal(pair))
+            if not self.order_manager.has_selled(instrument):
+                if self.near_sell_signal(instrument):
+                    self.log(self.messages.near_sell_signal(instrument))
                     if self.config["tts"]:
                         self.tts.say(
                             self.messages.near_sell_signal(
-                                f"{' '.join(pair.split('_'))}"
+                                f"{' '.join(instrument.split('_'))}"
                             )
                         )
-                if self.enter_sell_signal(pair) and not self.testing:
+                if self.enter_sell_signal(instrument) and not self.testing:
                     # Calculate SL and TK based on ATR and Profit/Risk ratio
-                    units = self.instrument_manager.get_units(pair)
-                    stop_loss = self.get_stop_loss(pair)
+                    units = self.instrument_manager.get_units(instrument)
+                    stop_loss = self.get_stop_loss(instrument)
                     s_l_pips = stop_loss * units
-                    take_profit = self.get_take_profit(pair)
+                    take_profit = self.get_take_profit(instrument)
 
                     # Calculate lot size
                     size = self.getsizer().getsizing(
-                        self.data[pair],
+                        self.data[instrument],
                         isbuy=False,
                         pips=s_l_pips / self.broker.o.get_leverage(),
                     )
 
                     # Get the current bid price and calculate SL and TK
-                    bid_price = self.instrument_manager.get_bid_price(pair)
+                    bid_price = self.instrument_manager.get_bid_price(
+                        instrument
+                    )
                     diff = close - bid_price
                     sl_price = bid_price + diff + stop_loss
                     tk_price = bid_price + diff - take_profit
@@ -240,9 +244,9 @@ class BaseStrategy(bt.Strategy):
                     if self.config["debug"]:
                         self.log(
                             (
-                                f"Pair: {pair} - Close: {close} - "
+                                f"Instrument: {instrument} - Close: {close} - "
                                 f"Bid: {bid_price:.5f} - "
-                                f"ATR: {self.atr[pair].atr[0]:.4f} - "
+                                f"ATR: {self.atr[instrument].atr[0]:.4f} - "
                                 f"SL (pips): {s_l_pips:.2f} - TK (pips): "
                                 f"{(take_profit * units):.2f} - "
                                 f"SL price: {sl_price:.5f} - "
@@ -253,7 +257,7 @@ class BaseStrategy(bt.Strategy):
 
                     # Create bracket order
                     self.sell_bracket(
-                        data=self.data[pair],
+                        data=self.data[instrument],
                         size=size,
                         exectype=bt.Order.Market,
                         stopprice=sl_price,

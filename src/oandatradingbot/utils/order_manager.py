@@ -28,11 +28,11 @@ class OrderManager(TransactionManager):
     ) -> None:
         super().__init__(config, telegram_bot)
         # Initialize dictionaries
-        for pair in config["pairs"]:
-            self.is_buyed_selled["BUY"][pair] = False
-            self.is_buyed_selled["SELL"][pair] = False
-            self._reset_instrument_order("BUY", pair)
-            self._reset_instrument_order("SELL", pair)
+        for instrument in config["instruments"]:
+            self.is_buyed_selled["BUY"][instrument] = False
+            self.is_buyed_selled["SELL"][instrument] = False
+            self._reset_instrument_order("BUY", instrument)
+            self._reset_instrument_order("SELL", instrument)
         # Check for pending orders
         self.recover_orders()
 
@@ -51,11 +51,11 @@ class OrderManager(TransactionManager):
         transaction: ApiTransactionType = response.json()["transaction"]
         return transaction
 
-    def has_buyed(self, pair: str) -> bool:
-        return self.is_buyed_selled["BUY"][pair]
+    def has_buyed(self, instrument: str) -> bool:
+        return self.is_buyed_selled["BUY"][instrument]
 
-    def has_selled(self, pair: str) -> bool:
-        return self.is_buyed_selled["SELL"][pair]
+    def has_selled(self, instrument: str) -> bool:
+        return self.is_buyed_selled["SELL"][instrument]
 
     def recover_orders(self) -> int:
         url = self.instrument_manager.url
@@ -92,38 +92,40 @@ class OrderManager(TransactionManager):
                 and main_order["type"] == "ORDER_FILL" \
                     and main_order["id"] not in self.trades_registry:
 
-                pair = main_order["instrument"]
+                instrument = main_order["instrument"]
                 operation_type: OperationType = "BUY" \
                     if float(main_order["units"]) > 0 else "SELL"
                 # Register buy or sell order
                 self.trades_registry[main_order["id"]] = {
-                    "pair": pair, "op_type": operation_type
+                    "instrument": instrument, "op_type": operation_type
                 }
-                if pair not in self.orders[operation_type]:
-                    self._reset_instrument_order(operation_type, pair)
-                self.orders[operation_type][pair]["MK"] = main_order
-                self.is_buyed_selled[operation_type][pair] = True
-                print(f"{operation_type} order {pair} recovered")
+                if instrument not in self.orders[operation_type]:
+                    self._reset_instrument_order(operation_type, instrument)
+                self.orders[operation_type][instrument]["MK"] = main_order
+                self.is_buyed_selled[operation_type][instrument] = True
+                print(f"{operation_type} order {instrument} recovered")
 
             # Register stop loss
             full_order = self._get_order(order["id"])
             if full_order["type"] == "STOP_LOSS_ORDER" \
                 and full_order["reason"] == "ON_FILL" \
                     and full_order["tradeID"] == main_order["id"]:
-                pair = self.trades_registry[full_order["tradeID"]]["pair"]
+                instrument = \
+                    self.trades_registry[full_order["tradeID"]]["instrument"]
                 op_type = self.trades_registry[
                     full_order["tradeID"]]["op_type"]
-                self.orders[op_type][pair]["SL"] = full_order
+                self.orders[op_type][instrument]["SL"] = full_order
 
             # Register take profit
             full_order = self._get_order(order["id"])
             if full_order["type"] == "TAKE_PROFIT_ORDER" \
                 and full_order["reason"] == "ON_FILL" \
                     and full_order["tradeID"] == main_order["id"]:
-                pair = self.trades_registry[full_order["tradeID"]]["pair"]
+                instrument = \
+                    self.trades_registry[full_order["tradeID"]]["instrument"]
                 op_type = self.trades_registry[
                     full_order["tradeID"]]["op_type"]
-                self.orders[op_type][pair]["TK"] = full_order
+                self.orders[op_type][instrument]["TK"] = full_order
 
         return len(orders)
 

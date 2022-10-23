@@ -22,7 +22,7 @@ config: ConfigType = {
     "timeframe": "Minutes",
     "timeframe_num": 1,
     "interval": "1m",
-    "pairs": ["EUR_NZD"],
+    "instruments": ["EUR_NZD"],
     "risk": 0.0001,
     "account_currency": "EUR",
     "language": "EN-US",

@@ -16,7 +16,7 @@ config: ConfigType = {
     "oanda_account_id": os.environ["oanda_account_id"],
     "practice": True,
     "language": "EN-US",
-    "pairs": ["EUR_NZD"],
+    "instruments": ["EUR_NZD"],
     "account_currency": "EUR",
     "account_type": "Demo",
     "tts": True,
@@ -47,7 +47,7 @@ class Transaction:
             "tradesClosed": [{"tradeID": self.trade_id}],
             "units": self.units,
             "price": "1.1515",
-            "instrument": config["pairs"][0],
+            "instrument": config["instruments"][0],
             "pl": "-20.50" if self.reason == "STOP_LOSS_ORDER" else "20.50",
             "time": str(datetime.now().timestamp())
         }

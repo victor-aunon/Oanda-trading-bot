@@ -17,7 +17,7 @@ IsBuyOrSellType = dict[str, Literal["BUY", "SELL"]]
 class OrderManagerBackTest:
     def __init__(
         self, messages_engine: Messages,
-        pairs: List[str],
+        instruments: List[str],
         profit_risk_ratio: float,
         broker: BackBroker
     ) -> None:
@@ -27,10 +27,10 @@ class OrderManagerBackTest:
         self.is_buy_or_sell: IsBuyOrSellType = {}
         self.orders: OrdersBTType = {"BUY": {}, "SELL": {}}
         self.trades: Dict[str, List[TradeType]] = {}
-        for pair in pairs:
-            self._reset_instrument_order("BUY", pair)
-            self._reset_instrument_order("SELL", pair)
-            self.trades[pair] = []
+        for instrument in instruments:
+            self._reset_instrument_order("BUY", instrument)
+            self._reset_instrument_order("SELL", instrument)
+            self.trades[instrument] = []
 
     def _reset_instrument_order(
         self, type: OperationType, instrument: str
@@ -43,86 +43,86 @@ class OrderManagerBackTest:
             "exit_time": ""
         }
 
-    def has_buyed(self, pair: str) -> bool:
-        if pair not in self.is_buy_or_sell:
+    def has_buyed(self, instrument: str) -> bool:
+        if instrument not in self.is_buy_or_sell:
             return False
-        return True if self.is_buy_or_sell[pair] == "BUY" else False
+        return True if self.is_buy_or_sell[instrument] == "BUY" else False
 
-    def has_selled(self, pair: str) -> bool:
-        if pair not in self.is_buy_or_sell:
+    def has_selled(self, instrument: str) -> bool:
+        if instrument not in self.is_buy_or_sell:
             return False
-        return True if self.is_buy_or_sell[pair] == "SELL" else False
+        return True if self.is_buy_or_sell[instrument] == "SELL" else False
 
     def manage_order(
         self, order: Order, size: float, timestamp: str, last_close: float
     ) -> str:
-        pair: str = order.data._name
+        instrument: str = order.data._name
         status = order.getstatusname()
         type_name = order.getordername()
-        if pair not in self.is_buy_or_sell:
+        if instrument not in self.is_buy_or_sell:
             return ""
-        op_type: OperationType = self.is_buy_or_sell[pair]
+        op_type: OperationType = self.is_buy_or_sell[instrument]
 
         # Register market (main) order. Wait till status is completed instead
         # of accepted in order to get the execution price
         if status in ["Completed"] and type_name == "Market":
-            self.orders[op_type][pair]["MK"] = order
-            self.orders[op_type][pair]["entry_time"] = timestamp
-            self.is_buy_or_sell[pair] = op_type
+            self.orders[op_type][instrument]["MK"] = order
+            self.orders[op_type][instrument]["entry_time"] = timestamp
+            self.is_buy_or_sell[instrument] = op_type
             if op_type == "BUY":
                 return self.messages.buy_order_placed(
-                    round(size, 2), pair, order.executed.price
+                    round(size, 2), instrument, order.executed.price
                 )
             elif op_type == "SELL":
                 return self.messages.sell_order_placed(
-                    round(size, 2), pair, order.executed.price
+                    round(size, 2), instrument, order.executed.price
                 )
 
         # Register stop order
         elif status in ["Accepted"] and type_name == "Stop":
-            self.orders[op_type][pair]["SL"] = order
+            self.orders[op_type][instrument]["SL"] = order
             return ""
 
         # Register limit order
         elif status in ["Accepted"] and type_name == "Limit":
-            self.orders[op_type][pair]["TK"] = order
+            self.orders[op_type][instrument]["TK"] = order
             return ""
 
         # Stop order completed
         elif status in ["Completed"] and type_name == "Stop":
-            self.orders[op_type][pair]["SL"] = order
+            self.orders[op_type][instrument]["SL"] = order
             loss = size * -1
             self.broker.set_cash(self.broker.get_cash() + loss)
-            self.orders[op_type][pair]["exit_time"] = timestamp
-            self._store_trade(op_type, "SL", pair, loss)
-            self._reset_instrument_order(op_type, pair)
-            self.is_buy_or_sell.pop(pair, None)
+            self.orders[op_type][instrument]["exit_time"] = timestamp
+            self._store_trade(op_type, "SL", instrument, loss)
+            self._reset_instrument_order(op_type, instrument)
+            self.is_buy_or_sell.pop(instrument, None)
             if op_type == "BUY":
-                return self.messages.stop_buy_order(pair, abs(loss))
+                return self.messages.stop_buy_order(instrument, abs(loss))
             elif op_type == "SELL":
-                return self.messages.stop_sell_order(pair, abs(loss))
+                return self.messages.stop_sell_order(instrument, abs(loss))
 
         # Limit order completed
         elif status in ["Completed"] and type_name == "Limit":
-            self.orders[op_type][pair]["TK"] = order
+            self.orders[op_type][instrument]["TK"] = order
             profit = size * self.p_r_ratio
             self.broker.set_cash(self.broker.get_cash() + profit)
-            self.orders[op_type][pair]["exit_time"] = timestamp
-            self._store_trade(op_type, "TK", pair, profit)
-            self._reset_instrument_order(op_type, pair)
-            self.is_buy_or_sell.pop(pair, None)
+            self.orders[op_type][instrument]["exit_time"] = timestamp
+            self._store_trade(op_type, "TK", instrument, profit)
+            self._reset_instrument_order(op_type, instrument)
+            self.is_buy_or_sell.pop(instrument, None)
             if op_type == "BUY":
-                return self.messages.limit_buy_order(pair, profit)
+                return self.messages.limit_buy_order(instrument, profit)
             elif op_type == "SELL":
-                return self.messages.limit_sell_order(pair, profit)
+                return self.messages.limit_sell_order(instrument, profit)
 
         # Order expired
         elif status == "Expired":
-            if self.orders[op_type][pair]["MK"].size == 0:
+            if self.orders[op_type][instrument]["MK"].size == 0:
                 return ""
-            open = self.orders[op_type][pair]["MK"].executed.price
+            open = self.orders[op_type][instrument]["MK"].executed.price
             if last_close >= open:
-                tk = self.orders[op_type][pair]["TK"].price
+                tk = self.orders[op_type][instrument]["TK"].price
                 if op_type == "BUY":
                     pl = (last_close - open) / (tk - open) \
                         * size * self.p_r_ratio
@@ -130,30 +130,30 @@ class OrderManagerBackTest:
                     pl = (open - last_close) / (open - tk) \
                         * size * self.p_r_ratio
             else:
-                sl = self.orders[op_type][pair]["SL"].price
+                sl = self.orders[op_type][instrument]["SL"].price
                 if op_type == "BUY":
                     pl = (open - last_close) / (open - sl) * (size * -1)
                 elif op_type == "SELL":
                     pl = (last_close - open) / (sl - open) * size * -1
             self.broker.set_cash(self.broker.get_cash() + pl)
-            self.orders[op_type][pair]["exit_time"] = timestamp
-            self._store_trade(op_type, "CANCEL", pair, pl, last_close)
-            self._reset_instrument_order(op_type, pair)
-            self.is_buy_or_sell.pop(pair, None)
+            self.orders[op_type][instrument]["exit_time"] = timestamp
+            self._store_trade(op_type, "CANCEL", instrument, pl, last_close)
+            self._reset_instrument_order(op_type, instrument)
+            self.is_buy_or_sell.pop(instrument, None)
             if op_type == "BUY":
-                return self.messages.buy_order_canceled(pair, pl)
+                return self.messages.buy_order_canceled(instrument, pl)
             elif op_type == "SELL":
-                return self.messages.sell_order_canceled(pair, pl)
+                return self.messages.sell_order_canceled(instrument, pl)
         return ""
 
     def _store_trade(
         self, op_type: OperationType,
         order_type: Literal["TK", "SL", "CANCEL"],
-        pair: str,
+        instrument: str,
         pl: float,
         exit_price: Optional[float] = None
     ) -> None:
-        main_order = self.orders[op_type][pair]
+        main_order = self.orders[op_type][instrument]
 
         if exit_price is None:
             exit_price = main_order[order_type].executed.price  # type: ignore
@@ -163,13 +163,13 @@ class OrderManagerBackTest:
             entry_price = exit_price
         sl_price = main_order["SL"].created.price
         tk_price = main_order["TK"].created.price
-        units = PIP_UNITS[pair.split("_")[1]]
+        units = PIP_UNITS[instrument.split("_")[1]]
         tk_pips = (tk_price - entry_price) * units if op_type == "BUY" \
             else (entry_price - tk_price) * units
         sl_pips = (entry_price - sl_price) * units if op_type == "BUY" \
             else (sl_price - entry_price) * units
 
-        self.trades[pair].append({
+        self.trades[instrument].append({
             "Entry": main_order["entry_time"],
             "Exit": main_order["exit_time"],
             "Operation": op_type,

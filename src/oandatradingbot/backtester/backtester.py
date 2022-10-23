@@ -77,15 +77,15 @@ def main(config_obj=None):
         config[param] = config["strategy_params"][param]  # type: ignore
     config.pop("strategy_params", None)
 
-    for pair in list(config["pairs"]):
+    for instrument in list(config["instruments"]):
         cerebro = bt.Cerebro(stdstats=True)
 
-        print(f"Downloading {pair} feed...")
-        feed = FinancialFeed(pair, config['interval']).get_feed()
-        data = bt.feeds.PandasData(dataname=feed, name=pair)
+        print(f"Downloading {instrument} feed...")
+        feed = FinancialFeed(instrument, config['interval']).get_feed()
+        data = bt.feeds.PandasData(dataname=feed, name=instrument)
 
         cerebro.resampledata(
-            data, name=pair,
+            data, name=instrument,
             timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
             compression=config['timeframe_num']
         )
@@ -95,7 +95,7 @@ def main(config_obj=None):
         # and SL and TK calculation are messed up
         cerebro.broker.set_coc(True)
 
-        config["pairs"] = [pair]
+        config["instruments"] = [instrument]
         kwargs = config
         kwargs["config"] = config  # type: ignore[typeddict-item]
         cerebro.addstrategy(MacdEmaAtrBackTest, **kwargs)
@@ -106,7 +106,7 @@ def main(config_obj=None):
         results = cerebro.run()
 
         summarizer = Summarizer(
-            results[0], config, pair, results[0].strat_name
+            results[0], config, instrument, results[0].strat_name
         )
 
         # Print and save summary in the results Excel file

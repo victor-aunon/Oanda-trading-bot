@@ -12,7 +12,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 config: ConfigType = {
     "results_path": os.path.join(current_dir, "results"),
-    "pairs": ["EUR_USD"],
+    "instruments": ["EUR_USD"],
     "cash": 10000,
     "risk": 1,
     "account_currency": "EUR",

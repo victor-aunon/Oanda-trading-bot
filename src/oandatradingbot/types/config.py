@@ -25,7 +25,7 @@ ConfigType = TypedDict(
     "ConfigType",
     {
         "results_path": str,
-        "pairs": List[str],
+        "instruments": List[str],
         "cash": float,
         "risk": float,
         "account_currency": str,

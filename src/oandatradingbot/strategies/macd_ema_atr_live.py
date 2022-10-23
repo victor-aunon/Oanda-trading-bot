@@ -37,33 +37,36 @@ class MacdEmaAtrLive(BaseStrategy):
         print(f"Strategy: {self.strat_name}")
 
     def initialize_dicts(self) -> None:
-        # Dictionaries whose keys are the fx pairs
+        # Dictionaries whose keys are the fx instruments
         self.data: dict[str, LineIterator] = {}
         self.macd: dict[str, Indicator] = {}
         self.ema: dict[str, Indicator] = {}
         self.atr: dict[str, Indicator] = {}
         self.data_ready: dict[str, bool] = {}
         # Fill the previous dictionaries
-        for pair in self.pairs:
+        for instrument in self.instruments:
             # Indicators
-            data: LineIterator = [d for d in self.datas if d._name == pair][0]
-            self.data[pair] = data
-            self.macd[pair] = MACD(
+            data: LineIterator = [d for d in self.datas
+                                  if d._name == instrument][0]
+            self.data[instrument] = data
+            self.macd[instrument] = MACD(
                 data.close,
                 period_me1=self.p.macd_fast_ema,
                 period_me2=self.p.macd_slow_ema,
                 period_signal=self.p.macd_signal_ema,
             )
-            self.ema[pair] = EMA(data.close, period=self.p.ema_period)
-            self.atr[pair] = ATR(data, period=self.p.atr_period)
-            self.data_ready[pair] = False
+            self.ema[instrument] = EMA(data.close, period=self.p.ema_period)
+            self.atr[instrument] = ATR(data, period=self.p.atr_period)
+            self.data_ready[instrument] = False
 
-    def get_stop_loss(self, pair: str) -> float:
-        return self.atr[pair].atr[0] * self.p.atr_distance  # type: ignore
-
-    def get_take_profit(self, pair: str) -> float:
+    def get_stop_loss(self, instrument: str) -> float:
         return (  # type: ignore
-            self.atr[pair].atr[0]
+            self.atr[instrument].atr[0] * self.p.atr_distance
+        )
+
+    def get_take_profit(self, instrument: str) -> float:
+        return (  # type: ignore
+            self.atr[instrument].atr[0]
             * self.p.atr_distance
             * self.p.profit_risk_ratio
         )

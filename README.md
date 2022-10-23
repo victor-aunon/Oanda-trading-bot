@@ -77,7 +77,7 @@ The following section covers how to run the bot for live trading, either on a pa
  - **`practice`**: `true` if you want to use the OANDA test environment, otherwise `false`.
  - **`timeframe`**: A string representing the timeframe to trade the market e.g. `"Minutes"`. Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
  - **`timeframe_num`**: The timeframe to trade the market. For example, if you selected `"Minutes"`, then this value can be 1, 5, 10 ... Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
- - **`pairs`**: An array of the pair currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
+ - **`instruments`**: An array with the pair of currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
  - **`risk`**: A float value indicating the cash percentage to be risked per trade (`1.0` = 1%).
  - **`account_currency`**: The currency of your OANDA account, e.g. `"EUR"` for euros.
  - **`telegram_token`**: A string representing your Telegram bot access token described in [Telegram bot section](#creating-a-telegram-bot-optional) (optional).
@@ -113,7 +113,7 @@ You can run the bot directly from the command line with `python -m oandatradingb
 A sample of the configuration file can be found in `src/oandatradingbot/config_backtest.json` which contains the following keys:
 
  - **`results_path`**: An array representing the path where backtesting results will be saved.
- - **`pairs`**: An array of the pair currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
+ - **`instruments`**: An array with the pair of currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
  - **`cash`**: A float value indicating the starting cash.
  - **`risk`**: A float value indicating the cash percentage to be risked per trade (`1.0` = 1%).
  - **`account_currency`**: The currency of your OANDA account, e.g. `"EUR"` for euros.
@@ -150,7 +150,7 @@ In the **`results_path`** you will find two files:
 A sample of the configuration file can be found in `src/oandatradingbot/config_optimize.json` which contains the following keys:
 
  - **`results_path`**: An array representing the path where backtesting results will be saved.
- - **`pairs`**: An array of the pair currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
+ - **`instruments`**: An array with the pair of currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
  - **`cash`**: A float value indicating the starting cash.
  - **`risk`**: A float value indicating the cash percentage to be risked per trade (`1.0` = 1%).
  - **`account_currency`**: The currency of your OANDA account, e.g. `"EUR"` for euros.
