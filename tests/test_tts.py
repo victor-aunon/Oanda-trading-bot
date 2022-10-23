@@ -12,11 +12,6 @@ def test_return_false_when_language_is_not_in_system():
     assert tts._set_language("klingon") is False
 
 
-def test_return_true_when_language_is_in_system():
-    tts = TTS()
-    assert tts._set_language("EN-US") is True
-
-
 def test_driver_is_dummy():
     # Testing a non-existent driver
     tts = TTS(driver="non-existent driver")  # -> Fallback to dummy driver
