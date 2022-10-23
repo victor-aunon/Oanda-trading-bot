@@ -34,6 +34,7 @@ ConfigType = TypedDict(
         "timeframe": str,
         "interval": str,
         "strategy_params": StrategyParamsType,
+        "profit_risk_ratio": float,
         "debug": bool,
         "testing": bool,
         "testing_date": datetime,

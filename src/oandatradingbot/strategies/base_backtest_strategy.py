@@ -1,16 +1,12 @@
 # Libraries
 from datetime import datetime
-import os
-import sys
 from typing import List, Optional, Union
 
 # Packages
 import backtrader as bt
-import numpy as np
-import pandas as pd
-import xlsxwriter
 
 # Local
+from oandatradingbot.strategies.backtest_save_results import SaveResults
 from oandatradingbot.types.config import ConfigType
 from oandatradingbot.utils.instrument_units import PIP_UNITS
 from oandatradingbot.utils.messages import Messages
@@ -37,6 +33,7 @@ class BaseBackTestStrategy(bt.Strategy):
             self.p.profit_risk_ratio,
             self.broker
         )
+        self.save_results = SaveResults(self.config)
         self.initialize_dicts()
 
     @staticmethod
@@ -171,150 +168,18 @@ class BaseBackTestStrategy(bt.Strategy):
                     )
                     self.order_manager.is_buy_or_sell[pair] = "SELL"
 
-    def stop(self):
+    def stop(self) -> None:
         # Skip the trades summary when optimizing
         if self.optimize:
-            try:
-                os.mkdir(
-                    os.path.join(
-                        self.config["results_path"],
-                        self.config["opt_name"],
-                        "temp"
-                    )
-                )
-            except OSError as e:
-                if e.errno == 17:
-                    pass
-                else:
-                    print(e)
-                    sys.exit()
-            # Calculate total won, lost and profit
-            # (absolute and per instrument)
-            pl_dict = {
-                "Trades": 0,
-                "Won": 0,
-                "Lost": 0,
-                "Long": 0,
-                "Long won": 0,
-                "Long lost": 0,
-                "Short": 0,
-                "Short won": 0,
-                "Short lost": 0,
-                "Total profit": 0.,
-                "Total loss": 0.,
-            }
-            for pair in self.pairs:
-                if len(self.order_manager.trades[pair]) == 0:
-                    continue
-                pr_long = [
-                    tr["PL"] for tr in self.order_manager.trades[pair]
-                    if (tr["PL"] > 0) and (tr["Operation"] == "BUY")
-                ]
-                pr_short = [
-                    tr["PL"] for tr in self.order_manager.trades[pair]
-                    if (tr["PL"] > 0) and (tr["Operation"] == "SELL")
-                ]
-                lo_long = [
-                    tr["PL"] for tr in self.order_manager.trades[pair]
-                    if (tr["PL"] < 0) and (tr["Operation"] == "BUY")
-                ]
-                lo_short = [
-                    tr["PL"] for tr in self.order_manager.trades[pair]
-                    if (tr["PL"] < 0) and (tr["Operation"] == "SELL")
-                ]
-                pl_dict["Won"] += (len(pr_long) + len(pr_short))
-                pl_dict[f"Won {pair}"] = (len(pr_long) + len(pr_short))
-                pl_dict["Lost"] += (len(lo_long) + len(lo_short))
-                pl_dict[f"Lost {pair}"] = (len(lo_long) + len(lo_short))
-                pl_dict["Long"] += (len(pr_long) + len(lo_long))
-                pl_dict["Long won"] += len(pr_long)
-                pl_dict["Long lost"] += len(lo_long)
-                pl_dict["Short"] += (len(pr_short) + len(lo_short))
-                pl_dict["Short won"] += len(pr_short)
-                pl_dict["Short lost"] += len(lo_short)
-                pl_dict[f"Trades {pair}"] = pl_dict[f"Won {pair}"] \
-                    + pl_dict[f"Lost {pair}"]
-                pl_dict[f"Returns {pair}"] = (sum(pr_long) + sum(pr_short))
-                pl_dict[f"Returns {pair}"] += (sum(lo_long) + sum(lo_short))
-                pl_dict["Total profit"] += (sum(pr_long) + sum(pr_short))
-                pl_dict["Total loss"] -= (sum(lo_long) + sum(lo_short))
-            pl_dict["Trades"] = pl_dict["Won"] + pl_dict["Lost"]
-            r_multiples_neg = np.array([-1] * pl_dict["Lost"])  # type: ignore
-            r_multiples_pos = np.array(
-                [self.p.profit_risk_ratio] * pl_dict["Won"]  # type: ignore
-            )
-            r_multiples = np.concatenate(
-                (r_multiples_pos, r_multiples_neg), axis=None
-            )
-            pl_dict["SQN"] = np.mean(r_multiples) / np.std(r_multiples) \
-                * np.sqrt(r_multiples.size)
-            print(
-                f"{self.strat_name} --> Won: {pl_dict['Won']} - Lost: "
-                f"{pl_dict['Lost']} - Win rate: "
-                f"{(pl_dict['Won'] / (pl_dict['Won'] + pl_dict['Lost'])):.3f} "
-                f"- Returns: "
-                f"{(pl_dict['Total profit'] - pl_dict['Total loss']):.2f} "
-                f"{self.config['account_currency']}"
-            )
-            # Save a temporary summary file
-            df = pd.DataFrame([pl_dict])
-            df.to_csv(os.path.join(
-                    self.config["results_path"],
-                    self.config["opt_name"],
-                    "temp",
-                    f"{self.strat_name}.csv"
-                ), sep=";"
+            self.save_results.save_optimization_results(
+                self.config["opt_name"],
+                self.strat_name,
+                self.pairs,
+                self.order_manager.trades
             )
             return
 
-        # Not optimizing
-        for pair in self.pairs:
-            if len(self.order_manager.trades[pair]) == 0:
-                continue
-
-            # Create xlsxwriter workbook
-            self.summary_file = os.path.join(
-                self.config["results_path"],
-                (
-                    f"Backtest_{pair}_{self.strat_name}_"
-                    f"{datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')}"
-                    ".xlsx"
-                )
-            )
-            workbook = xlsxwriter.Workbook(self.summary_file)
-            worksheet = workbook.add_worksheet("Trades")
-
-            # Add a format for the successful operation
-            successful = workbook.add_format({
-                'border': 0,
-                'bg_color': '#94eb9e',
-                'align': 'center',
-                'valign': 'vcenter',
-            })
-
-            # Add a format for the unsuccessful operation
-            unsuccessful = workbook.add_format({
-                'border': 0,
-                'bg_color': '#fa7f7f',
-                'align': 'center',
-                'valign': 'vcenter',
-            })
-
-            # Create the trades table
-            worksheet.add_table(
-                0, 0,
-                len(self.order_manager.trades[pair]),
-                len(self.order_manager.trades[pair][0].keys()) - 1,
-                {
-                    "columns": [{"header": col} for col
-                                in self.order_manager.trades[pair][0].keys()]
-                }
-            )
-            for i, trade in enumerate(self.order_manager.trades[pair]):
-                worksheet.write_row(
-                    i + 1, 0, trade.values(),
-                    cell_format=successful if trade["PL"] > 0
-                    else unsuccessful
-                )
-
-            workbook.close()
+        # Not optimizing -> just backtest: pairs only contains one pair
+        self.summary_file = self.save_results.save_backtest_results(
+            self.strat_name, self.pairs[0], self.order_manager.trades
+        )

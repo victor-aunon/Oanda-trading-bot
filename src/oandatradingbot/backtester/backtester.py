@@ -13,7 +13,6 @@ from oandatradingbot.strategies.macd_ema_atr_backtest import MacdEmaAtrBackTest
 from oandatradingbot.utils.financial_feed import FinancialFeed
 from oandatradingbot.types.config import ConfigType
 
-CRYPTOS = ["BTC", "BCH", "ETH", "LTC"]
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -77,12 +76,11 @@ def main(config_obj=None, testing=False):
         config[param] = config["strategy_params"][param]  # type: ignore
     config.pop("strategy_params", None)
 
-    for pair in list(config["pairs"]):  # type: ignore
+    for pair in list(config["pairs"]):
         cerebro = bt.Cerebro(stdstats=True)
 
-        market = "fx" if pair.split("_")[0] not in CRYPTOS else "crypto"
         print(f"Downloading {pair} feed...")
-        feed = FinancialFeed(pair, market, config['interval']).get_feed()
+        feed = FinancialFeed(pair, config['interval']).get_feed()
         data = bt.feeds.PandasData(dataname=feed, name=pair)
 
         cerebro.resampledata(
@@ -97,7 +95,9 @@ def main(config_obj=None, testing=False):
         cerebro.broker.set_coc(True)
 
         config["pairs"] = [pair]
-        cerebro.addstrategy(MacdEmaAtrBackTest, **config)
+        kwargs = config
+        kwargs["config"] = config  # type: ignore[typeddict-item]
+        cerebro.addstrategy(MacdEmaAtrBackTest, **kwargs)
 
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
 
