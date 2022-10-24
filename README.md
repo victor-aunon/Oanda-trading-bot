@@ -69,9 +69,9 @@ The following section covers how to run the bot for live trading, either on a pa
 
 ### **The configuration file (live trading)**
 
- In order to run the bot, a valid configuration JSON file must be created. A sample of the configuration file can be found in `src/oandatradingbot/config.json` which contains the following keys:
+ In order to run the bot, a valid configuration JSON file must be created. A sample of the configuration file can be found in `./config/config.json` which contains the following keys:
 
- - **`database_uri`**: A string representing the address of the trades database. If omitted, the bot will create a sqlite database in `/src/oandatradingbot/trades.db`.
+ - **`database_uri`**: A string representing the address of the trades database. If omitted, the bot will create a sqlite database in `./trades.db`.
  - **`oanda_token`**: A string representing the OANDA access token explained in [OANDA token section](#creating-an-oanda-account-and-an-access-token).
  - **`oanda_account_id`**: A string representing the OANDA account ID number explained in [OANDA token section](#creating-an-oanda-account-and-an-access-token).
  - **`practice`**: `true` if you want to use the OANDA test environment, otherwise `false`.
@@ -101,7 +101,7 @@ The following section covers how to run the bot for live trading, either on a pa
 
 You can run the bot directly from the command line with `python -m oandatradingbot` using the following arguments:
 
-- **`--config-file`**: followed by the JSON configuration file. If omitted, the bot will use the file in `/src/oandatradingbot/config.json`.
+- **`--config-file`**: followed by the JSON configuration file. If omitted, the bot will use the file in `./config/config.json`.
 - **`--debug`**: by adding this argument, the bot will show more information to the console.
 
 ## Backtesting
@@ -110,7 +110,7 @@ You can run the bot directly from the command line with `python -m oandatradingb
 
 ### **The configuration file (backtesting)**
 
-A sample of the configuration file can be found in `src/oandatradingbot/config_backtest.json` which contains the following keys:
+A sample of the configuration file can be found in `./config/config_backtest.json` which contains the following keys:
 
  - **`results_path`**: An array representing the path where backtesting results will be saved.
  - **`instruments`**: An array with the pair of currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
@@ -132,7 +132,7 @@ A sample of the configuration file can be found in `src/oandatradingbot/config_b
 
 You can run the backtest directly from the command line with `python -m oandatradingbot.backtester` using the following arguments:
 
-- **`--config-file`**: followed by the JSON configuration file. If omitted, the bot will use the file in `/src/oandatradingbot/config_backtest.json`.
+- **`--config-file`**: followed by the JSON configuration file. If omitted, the bot will use the file in `./config/config_backtest.json`.
 - **`--debug`**: by adding this argument, the bot will show more information to the console.
 
 In the **`results_path`** you will find two files:
@@ -147,7 +147,7 @@ In the **`results_path`** you will find two files:
 
 ### **The configuration file (optimizing)**
 
-A sample of the configuration file can be found in `src/oandatradingbot/config_optimize.json` which contains the following keys:
+A sample of the configuration file can be found in `./config/config_optimize.json` which contains the following keys:
 
  - **`results_path`**: An array representing the path where backtesting results will be saved.
  - **`instruments`**: An array with the pair of currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
@@ -168,7 +168,7 @@ A sample of the configuration file can be found in `src/oandatradingbot/config_o
 
 You can run the optimizer directly from the command line with `python -m oandatradingbot.optimizer` using the following argument:
 
-- **`--config-file`**: followed by the JSON configuration file. If omitted, the bot will use the file in `/src/oandatradingbot/config_optimize.json`.
+- **`--config-file`**: followed by the JSON configuration file. If omitted, the bot will use the file in `./config/config_optimize.json`.
 
 By default, the optimizer will backtest all the different parameter combinations using multiprocessing. So if the computer CPU has eight cores, eight combinations are backtested in parallel.
 

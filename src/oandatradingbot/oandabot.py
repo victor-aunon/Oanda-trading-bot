@@ -25,7 +25,7 @@ def parse_args(pargs=None):
 
     parser.add_argument(
         '--config-file',
-        default=os.path.join(current_dir, "config.json"),
+        default=os.path.join(current_dir, "..", "..", "config", "config.json"),
         required=False, help="Configuration json file required to run the bot")
 
     parser.add_argument(
@@ -56,7 +56,7 @@ def main(config_obj=None) -> None:
     # Default database
     if "database_uri" not in config:
         config["database_uri"] = \
-            f"sqlite:///{os.path.join(current_dir, 'trades.db')}"
+            f"sqlite:///{os.path.join(current_dir, '..', '..', 'trades.db')}"
 
     config["account_type"] = "Demo" if config["practice"] else "Brokerage"
     config["debug"] = args.debug

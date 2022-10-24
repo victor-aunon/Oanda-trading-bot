@@ -26,7 +26,9 @@ def parse_args(pargs=None):
 
     parser.add_argument(
         '--config-file',
-        default=os.path.join(current_dir, "..", "config_backtest.json"),
+        default=os.path.join(
+            current_dir, "..", "..", "..", "config", "config_backtest.json"
+        ),
         required=False, help="Configuration json file required to run the bot")
 
     parser.add_argument(
