@@ -15,6 +15,16 @@ from oandatradingbot.repository.trade import Trade
 class Repository:
     def __init__(self, db_uri: str) -> None:
         self.db_uri = db_uri
+        self._check_session()
+
+    def _check_session(self) -> None:
+        try:
+            engine = create_engine(self.db_uri)
+            Base.metadata.create_all(engine)
+            session = Session(bind=engine)
+            session.close()
+        except Exception as e:
+            raise SystemExit(e)
 
     def start_session(self) -> Session:
         try:

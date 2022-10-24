@@ -15,8 +15,7 @@ db_uri = f"sqlite:///{os.path.join(current_dir, 'test.db')}"
 
 def test_raise_exception_when_db_uri_is_invalid():
     with pytest.raises(SystemExit):
-        repository = Repository("")
-        repository.start_session()
+        _ = Repository("")
 
 
 def test_create_trade():
