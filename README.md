@@ -23,11 +23,11 @@ within the OANDA trading platform. It is based on the [Backtrader](https://www.b
 
 ## Strategy description
 
-The trading strategy is based on the **MACD** ([see MACD in Stockcharts](https://school.stockcharts.com/doku.php?id=technical_indicators:moving_average_convergence_divergence_macd)) and a slow **EMA** ([see EMA in Stockcharts](https://school.stockcharts.com/doku.php?id=technical_indicators:moving_averages)) to catch the main trend of the market. The strategy is defined in the `MACDEMAATRStrategy` class in the `src/oandatradingbot/oandabot.py` file. A thorough explanation of the strategy can be found in the [tradingrush.net](https://tradingrush.net/i-risked-macd-trading-strategy-100-times-heres-what-happened/) web and YouTube channel.
+The trading strategy is based on the **MACD** ([see MACD in Stockcharts](https://school.stockcharts.com/doku.php?id=technical_indicators:moving_average_convergence_divergence_macd)) and a slow **EMA** ([see EMA in Stockcharts](https://school.stockcharts.com/doku.php?id=technical_indicators:moving_averages)) to catch the main trend of the market. The strategy is defined in the `MACDEMAATRStrategy` class in the `src/oandatradingbot/oandabot.py` file. A thorough explanation of the strategy can be found in the [tradingrush.net](https://tradingrush.net/i-risked-macd-trading-strategy-100-times-heres-what-happened/) web and YouTube channel. Additionally, a new feature has been included in version 1.6.0 to check the trend in a higher time frame and only trade if trends are the same in both time frames.
 
 In order to set the _stop loss_ for every order, the **Average True Range** ([see ATR in Stockcharts](https://school.stockcharts.com/doku.php?id=technical_indicators:average_true_range_atr)). The _take profit_ limit is calculate based on the stop loss multiplied by the _profit-risk ratio_. This parameters can be tweaked in the configuration file.
 
-Tests have been carried out with a timeframe of **5 minutes**, but the user is able to change the timeframe in the configuration file.
+Tests have been carried out with a time frame of **5 minutes**, but the user is able to change the time frame in the configuration file.
 
 ## Installing the package
 
@@ -54,7 +54,7 @@ The bot also requires your account ID number, it can be found by clicking on the
 
 ### **Creating a Telegram bot (optional)**
 
-Since version 1.1.0, the bot is able to notify trades and send daily and weekly reports through Telegram. To use this function, a Telegram bot has to be created. The creation process is explain in the next steps: 
+Since version 1.1.0, the bot is able to notify trades and send daily and weekly reports through Telegram. To use this function, a Telegram bot has to be created. The creation process is explain in the next steps:
 
  1. Go to Telegram and open a chat with **BotFather**
  2. You can type `/start` to see a complete list of all the commands you can run or directly type `/newbot` to create a new bot.
@@ -71,12 +71,15 @@ The following section covers how to run the bot for live trading, either on a pa
 
  In order to run the bot, a valid configuration JSON file must be created. A sample of the configuration file can be found in `./config/config.json` which contains the following keys:
 
- - **`database_uri`**: A string representing the address of the trades database. If omitted, the bot will create a sqlite database in `./trades.db`.
+ - **`database_uri`**: A string representing the address of the trades database. If omitted, the bot will create a sqlite database named `trades.db` in the root folder of the project.
  - **`oanda_token`**: A string representing the OANDA access token explained in [OANDA token section](#creating-an-oanda-account-and-an-access-token).
  - **`oanda_account_id`**: A string representing the OANDA account ID number explained in [OANDA token section](#creating-an-oanda-account-and-an-access-token).
  - **`practice`**: `true` if you want to use the OANDA test environment, otherwise `false`.
- - **`timeframe`**: A string representing the timeframe to trade the market e.g. `"Minutes"`. Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
- - **`timeframe_num`**: The timeframe to trade the market. For example, if you selected `"Minutes"`, then this value can be 1, 5, 10 ... Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+ - **`timeframe`**: An array of a maximum of two JSON objects with the following fields:
+    - `timeframe`: A string representing the time frame to trade the market e.g. `"Minutes"`. Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+    - `compression`: The time frame to trade the market in bars. For example, if you selected `"Minutes"`, then this value can be 1, 5, 10 ... Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+
+    The second `timeframe` object defines the higher time frame used to check that the trend in this higher time frame is the same of the main trading time frame (first `timeframe` object).
  - **`instruments`**: An array with the pair of currencies to trade, e.g. `["EUR_USD", "ETH_USD"]`.
  - **`risk`**: A float value indicating the cash percentage to be risked per trade (`1.0` = 1%).
  - **`account_currency`**: The currency of your OANDA account, e.g. `"EUR"` for euros.
@@ -117,9 +120,12 @@ A sample of the configuration file can be found in `./config/config_backtest.jso
  - **`cash`**: A float value indicating the starting cash.
  - **`risk`**: A float value indicating the cash percentage to be risked per trade (`1.0` = 1%).
  - **`account_currency`**: The currency of your OANDA account, e.g. `"EUR"` for euros.
- - **`timeframe`**: A string representing the timeframe to trade the market e.g. `"Minutes"`. Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
- - **`timeframe_num`**: The timeframe to trade the market. For example, if you selected `"Minutes"`, then this value can be 1, 5, 10 ... Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
- - **`interval`**: A string representing the timeframe interval in a valid **yfinance** format. It must represent the same timeframe as `timeframe` and `timeframe_num`. So if these fields were `"Minutes"` and `5`, **`interval`** would be `"5m"`. Valid intervals are `1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo`.
+ - **`timeframe`**: An array of a maximum of two JSON objects with the following fields:
+    - `timeframe`: A string representing the time frame to trade the market e.g. `"Minutes"`. Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+    - `compression`: The time frame to trade the market in bars. For example, if you selected `"Minutes"`, then this value can be 1, 5, 10 ... Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+    - `interval`: A string representing the time frame interval in a valid **yfinance** format. It must represent the same time frame as `timeframe` and `compression`. So if these fields were `"Minutes"` and `5`, **interval** would be `"5m"`. Valid intervals are `1m, 2m, 5m, 15m,30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo` and `3mo`.
+
+    The second `timeframe` object defines the higher time frame used to check that the trend in this higher time frame is the same of the main trading time frame (first `timeframe` object).
  - **`language`**: A string representing the language used to print the trading bot messages to the console. Valid values are `"ES-ES"` and `"EN-US"`.
  - **`strategy_params`**: A JSON object representing the main parameters of the trading strategy:
      - **`macd_fast_ema`**: the period of the MACD fast EMA as an integer. Default value is 12.
@@ -154,9 +160,12 @@ A sample of the configuration file can be found in `./config/config_optimize.jso
  - **`cash`**: A float value indicating the starting cash.
  - **`risk`**: A float value indicating the cash percentage to be risked per trade (`1.0` = 1%).
  - **`account_currency`**: The currency of your OANDA account, e.g. `"EUR"` for euros.
- - **`timeframe`**: A string representing the timeframe to trade the market e.g. `"Minutes"`. Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
- - **`timeframe_num`**: The timeframe to trade the market. For example, if you selected `"Minutes"`, then this value can be 1, 5, 10 ... Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
- - **`interval`**: A string representing the timeframe interval in a valid **yfinance** format. It must represent the same timeframe as `timeframe` and `timeframe_num`. So if these fields were `"Minutes"` and `5`, **`interval`** would be `"5m"`. Valid intervals are `1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo`.
+ - **`timeframe`**: An array of a maximum of two JSON objects with the following fields:
+    - `timeframe`: A string representing the timeframe to trade the market e.g. `"Minutes"`. Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+    - `compression`: The timeframe to trade the market in bars. For example, if you selected `"Minutes"`, then this value can be 1, 5, 10 ... Check valid values in the [Backtrader documentation](https://www.backtrader.com/docu/live/oanda/oanda/#oandadata).
+    - `interval`: A string representing the time frame interval in a valid **yfinance** format. It must represent the same time frame as `timeframe` and `compression`. So if these fields were `"Minutes"` and `5`, **interval** would be `"5m"`. Valid intervals are `1m, 2m, 5m, 15m,30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo` and `3mo`.
+
+    The second `timeframe` object defines the higher time frame used to check that the trend in this higher time frame is the same of the main trading time frame (first `timeframe` object).
  - **`strategy_params`**: A JSON object representing the main parameters of the trading strategy:
      - **`macd_fast_ema`**: the period of the MACD fast EMA. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.
      - **`macd_slow_ema`**: the period of the MACD slow EMA. It can be either a single value, a list of values or an object composed of three fields (`start`, `end` and `step`) defining an evenly spaced list of numbers over the interval `[start, end[`.

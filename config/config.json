@@ -3,8 +3,13 @@
     "oanda_token": "your-oanda-token",
     "oanda_account_id": "your-oanda-account-id",
     "practice": true,
-    "timeframe": "Minutes",
-    "timeframe_num": 1,
+    "timeframes": [
+        {
+            "timeframe": "Minutes",
+            "compression": 5,
+            "interval": "5m"
+        }
+    ],
     "instruments": ["EUR_USD"],
     "risk": 0.1,
     "account_currency": "EUR",

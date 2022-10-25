@@ -21,8 +21,6 @@ class Summarizer:
         self.results_path = config["results_path"]
         self.initial_cash = config["cash"]
         self.currency = config["account_currency"]
-        self.interval = config["interval"]
-        self.timeframe_num = config["timeframe_num"]
         self.opt_name = config["opt_name"]
         for file in os.listdir(
             os.path.join(self.results_path, self.opt_name, "temp")

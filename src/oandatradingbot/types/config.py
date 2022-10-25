@@ -20,6 +20,15 @@ StrategyParamsType = TypedDict(
     },
 )
 
+TimeFrameType = TypedDict(
+    "TimeFrameType",
+    {
+        "timeframe": str,
+        "compression": int,
+        "interval": str
+    }
+)
+
 
 ConfigType = TypedDict(
     "ConfigType",
@@ -30,14 +39,13 @@ ConfigType = TypedDict(
         "risk": float,
         "account_currency": str,
         "language": Union[Literal["ES-ES"], Literal["EN-US"]],
-        "timeframe_num": int,
-        "timeframe": str,
-        "interval": str,
+        "timeframes": List[TimeFrameType],
         "strategy_params": StrategyParamsType,
         "profit_risk_ratio": float,
         "debug": bool,
         "testing": bool,
         "testing_date": datetime,
+        "testing_directory": str,
         "optimize": bool,
         "opt_name": str,
         "database_uri": str,

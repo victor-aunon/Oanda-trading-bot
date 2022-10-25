@@ -35,7 +35,7 @@ class Summarizer:
             config["profit_risk_ratio"]  # type: ignore[typeddict-item]
         self.initial_cash: float = config["cash"]
         self.currency: str = config["account_currency"]
-        self.interval: int = config["timeframe_num"]
+        self.tf_compression: int = config["timeframes"][0]["compression"]
         self.testing: bool = config["testing"]
         self.results_path: str = config["results_path"]
 
@@ -111,7 +111,7 @@ class Summarizer:
         tr_pl = self._get_trades_pl_stats()
         w_rate = tr_pl["Won"] / tr_pl["Trades"]
         w_l_ratio = tr_pl["Won"] / tr_pl["Lost"]
-        m_d_t = self.drawdown["max"]["len"] * self.interval / 60 / 24
+        m_d_t = self.drawdown["max"]["len"] * self.tf_compression / 60 / 24
         report_name = self.instrument if self.instrument is not None \
             else self.strategy
         cash = tr_pl["Total profit"] - tr_pl["Total loss"]
@@ -157,7 +157,7 @@ class Summarizer:
         tr_pl = self._get_trades_pl_stats()
         w_rate = tr_pl["Won"] / tr_pl["Trades"]
         w_l_ratio = tr_pl["Won"] / tr_pl["Lost"]
-        m_d_t = self.drawdown["max"]["len"] * self.interval / 60 / 24
+        m_d_t = self.drawdown["max"]["len"] * self.tf_compression / 60 / 24
         report_name = self.instrument if self.instrument is not None \
             else self.strategy
         cash = tr_pl["Total profit"] - tr_pl["Total loss"]

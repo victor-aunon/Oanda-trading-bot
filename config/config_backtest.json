@@ -4,10 +4,19 @@
     "cash": 10000,
     "risk": 1,
     "account_currency": "EUR",
-    "timeframe_num": 5,
-    "timeframe": "Minutes",
-    "interval": "5m",
     "language": "EN-US",
+    "timeframes": [
+        {
+            "timeframe": "Minutes",
+            "compression": 5,
+            "interval": "5m"
+        },
+        {
+            "timeframe": "Minutes",
+            "compression": 60,
+            "interval": "60m"
+        }
+    ],
     "strategy_params": {
         "macd_fast_ema": 8,
         "macd_slow_ema": 15,

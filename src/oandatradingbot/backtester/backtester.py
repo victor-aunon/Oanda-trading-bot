@@ -2,7 +2,6 @@
 import argparse
 import json
 import os
-import sys
 
 # Packages
 import backtrader as bt
@@ -10,8 +9,9 @@ import backtrader as bt
 # Locals
 from oandatradingbot.backtester.summarizer import Summarizer
 from oandatradingbot.strategies.macd_ema_atr_backtest import MacdEmaAtrBackTest
-from oandatradingbot.utils.financial_feed import FinancialFeed
 from oandatradingbot.types.config import ConfigType
+from oandatradingbot.utils.config_checker import check_config
+from oandatradingbot.utils.financial_feed import FinancialFeed
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -57,40 +57,29 @@ def main(config_obj=None):
         config = config_obj
 
     config["debug"] = args.debug
-    config["optimize"] = False
-    if "testing" not in config:
-        config["testing"] = False
 
-    if config["results_path"] == "the path where results will be saved":
-        print("ERROR: Change the name of the results_path before backtesting")
-        sys.exit()
-
-    try:
-        os.mkdir(config["results_path"])
-    except OSError as e:
-        if e.errno == 17:
-            pass
-        else:
-            print(e)
-            sys.exit()
-
-    # Transform config dictionary
-    for param in config["strategy_params"]:
-        config[param] = config["strategy_params"][param]  # type: ignore
-    config.pop("strategy_params", None)
+    config = check_config(config, "backtest")
 
     for instrument in list(config["instruments"]):
         cerebro = bt.Cerebro(stdstats=True)
 
-        print(f"Downloading {instrument} feed...")
-        feed = FinancialFeed(instrument, config['interval']).get_feed()
-        data = bt.feeds.PandasData(dataname=feed, name=instrument)
+        for i, tframe in enumerate(config["timeframes"]):
+            print(
+                f"Downloading {instrument} feed with interval "
+                f"{tframe['interval']}..."
+            )
+            feed = FinancialFeed(instrument, tframe['interval']).get_feed()
+            data = bt.feeds.PandasData(dataname=feed, name=instrument)
+            if i == 0:
+                data_name = instrument
+            else:
+                data_name = f"{instrument}t{tframe['compression']}"
 
-        cerebro.resampledata(
-            data, name=instrument,
-            timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
-            compression=config['timeframe_num']
-        )
+            cerebro.resampledata(
+                data, name=data_name,
+                timeframe=eval(f"bt.TimeFrame.{tframe['timeframe']}"),
+                compression=tframe['compression']
+            )
 
         cerebro.broker = bt.brokers.BackBroker(cash=config["cash"])
         # Allow cheat con close, otherwise order will match next open price

@@ -19,9 +19,10 @@ config: ConfigType = {
     "oanda_token": os.environ["oanda_token"],
     "oanda_account_id": os.environ["oanda_account_id"],
     "practice": True,
-    "timeframe": "Minutes",
-    "timeframe_num": 1,
-    "interval": "1m",
+    "timeframes": [
+        {"timeframe": "Minutes", "compression": 1, "interval": "1m"},
+        {"timeframe": "Minutes", "compression": 30, "interval": "30m"}
+    ],
     "instruments": ["EUR_NZD"],
     "risk": 0.0001,
     "account_currency": "EUR",

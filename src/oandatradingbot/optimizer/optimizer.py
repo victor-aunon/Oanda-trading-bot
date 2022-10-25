@@ -1,10 +1,8 @@
 # Libraries
 import argparse
-from datetime import datetime
 import json
 from multiprocessing import cpu_count
 import os
-import sys
 from typing import List
 
 # Packages
@@ -16,6 +14,7 @@ from oandatradingbot.strategies.macd_ema_atr_backtest import MacdEmaAtrBackTest
 from oandatradingbot.utils.financial_feed import FinancialFeed
 from oandatradingbot.optimizer.summarizer_opt import Summarizer
 from oandatradingbot.types.config import ConfigType
+from oandatradingbot.utils.config_checker import check_config
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -54,35 +53,8 @@ def main(config_obj=None):
         config = config_obj
 
     config["debug"] = False
-    config["optimize"] = True
 
-    if config["results_path"] == "the path where results will be saved":
-        print("ERROR: Change the name of the results_path before backtesting")
-        sys.exit()
-
-    # Create results folder
-    opt_name: str = (
-        "Optimization_"
-        f"{datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')}"
-    )
-
-    config["opt_name"] = opt_name
-    try:
-        os.mkdir(os.path.join(config["results_path"]))
-    except OSError as e:
-        if e.errno == 17:
-            pass
-        else:
-            print(e)
-            sys.exit()
-    try:
-        os.mkdir(os.path.join(config["results_path"], opt_name))
-    except OSError as e:
-        if e.errno == 17:
-            pass
-        else:
-            print(e)
-            sys.exit()
+    config = check_config(config, "optimize")
 
     # Create ranges from strategy parameters
     variations: List[int] = []
@@ -108,25 +80,34 @@ def main(config_obj=None):
 
     cerebro = bt.Cerebro(stdstats=False, optreturn=True)
 
-    config["instruments"] = list(set(config["instruments"]))
     for instrument in config["instruments"]:
-        print(f"Downloading {instrument} feed...")
-        feed = FinancialFeed(instrument, config["interval"]).get_feed()
-        data = bt.feeds.PandasData(dataname=feed, name=instrument)
+        for i, tframe in enumerate(config["timeframes"]):
+            print(
+                f"Downloading {instrument} feed with interval "
+                f"{tframe['interval']}..."
+            )
+            feed = FinancialFeed(instrument, tframe["interval"]).get_feed()
+            data = bt.feeds.PandasData(dataname=feed, name=instrument)
+            if i == 0:
+                data_name = instrument
+            else:
+                data_name = f"{instrument}t{tframe['compression']}"
 
-        cerebro.resampledata(
-            data,
-            name=instrument,
-            timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
-            compression=config["timeframe_num"],
-        )
+            cerebro.resampledata(
+                data,
+                name=data_name,
+                timeframe=eval(f"bt.TimeFrame.{tframe['timeframe']}"),
+                compression=tframe["compression"],
+            )
 
     cerebro.broker = bt.brokers.BackBroker(cash=config["cash"])
     # Allow cheat con close, otherwise order will match next open price
     # and SL and TK calculation are messed up
     cerebro.broker.set_coc(True)
 
+    # Envolve instruments and timeframes in an array for multiprocessing
     config["instruments"] = [config["instruments"]]  # type: ignore
+    config["timeframes"] = [config["timeframes"]]  # type: ignore
     cerebro.optstrategy(MacdEmaAtrBackTest, **config)
 
     print("Running backtests...")

@@ -11,6 +11,7 @@ from btoandav20.sizers.oandav20sizer import OandaV20RiskPercentSizer
 # Local
 from oandatradingbot.strategies.macd_ema_atr_live import MacdEmaAtrLive
 from oandatradingbot.types.config import ConfigType
+from oandatradingbot.utils.config_checker import check_config
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -53,17 +54,9 @@ def main(config_obj=None) -> None:
     else:
         config = config_obj
 
-    # Default database
-    if "database_uri" not in config:
-        config["database_uri"] = \
-            f"sqlite:///{os.path.join(current_dir, '..', '..', 'trades.db')}"
-
-    config["account_type"] = "Demo" if config["practice"] else "Brokerage"
     config["debug"] = args.debug
-    if "testing" not in config:
-        config["testing"] = False
-    # Check there are no repeated instruments
-    config["instruments"] = list(set(config["instruments"]))
+
+    config = check_config(config, "live")
 
     # Instantiate cerebro
     cerebro = bt.Cerebro()
@@ -76,26 +69,25 @@ def main(config_obj=None) -> None:
         notif_transactions=True
     )
 
-    # Transform config dictionary
-    for param in config["strategy_params"]:
-        p = config["strategy_params"][param]  # type: ignore[literal-required]
-        config[param] = p  # type: ignore[literal-required]
-    config.pop("strategy_params", None)
-
     for instrument in config["instruments"]:
-        data = store.getdata(
-            dataname=instrument,
-            timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
-            compression=config["timeframe_num"]
-            # qcheck=20,  # Increase qcheck (0.5 def) to ensure candles every
-            # next
-        )
-        cerebro.resampledata(
-            data,
-            name=instrument,
-            timeframe=eval(f"bt.TimeFrame.{config['timeframe']}"),
-            compression=config["timeframe_num"],
-        )
+        for i, tframe in enumerate(config["timeframes"]):
+            data = store.getdata(
+                dataname=instrument,
+                timeframe=eval(f"bt.TimeFrame.{tframe['timeframe']}"),
+                compression=tframe["compression"]
+                # Increase qcheck (0.5 def) to ensure candles every next
+                # qcheck=20,
+            )
+            if i == 0:
+                data_name = instrument
+            else:
+                data_name = f"{instrument}t{tframe['compression']}"
+            cerebro.resampledata(
+                data,
+                name=data_name,
+                timeframe=eval(f"bt.TimeFrame.{tframe['timeframe']}"),
+                compression=tframe["compression"],
+            )
     cerebro.broker = store.getbroker()  # Assign Oanda broker
 
     kwargs = config

@@ -17,9 +17,10 @@ config = {
     "risk": 1,
     "account_currency": "EUR",
     "language": "ES-ES",
-    "timeframe_num": 5,
-    "timeframe": "Minutes",
-    "interval": "5m",
+    "timeframes": [
+        {"timeframe": "Minutes", "compression": 5, "interval": "5m"},
+        {"timeframe": "Minutes", "compression": 60, "interval": "60m"}
+    ],
     "strategy_params": {
         "macd_fast_ema": [5, 6],
         "macd_slow_ema": 25,

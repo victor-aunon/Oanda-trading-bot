@@ -19,8 +19,8 @@ class BaseBackTestStrategy(bt.Strategy):
         super().__init__()
         self.config: ConfigType = kwargs \
             if kwargs["optimize"] else kwargs["config"]
+        self.timeframes = self.config["timeframes"]
         self.optimize = self.config["optimize"]
-        self._check_config()
         self.instruments: List[str] = [p for p in self.config["instruments"]] \
             if self.optimize else self.config["instruments"]
         self.account_currency: str = self.config["account_currency"]
@@ -40,15 +40,6 @@ class BaseBackTestStrategy(bt.Strategy):
     @staticmethod
     def datetime_to_str(timestamp: datetime) -> str:
         return datetime.strftime(timestamp, "%Y-%m-%d %H:%M:%S")
-
-    def _check_config(self) -> None:
-        # Check language
-        if "language" not in self.config \
-                or self.config["language"] not in ["EN-US", "ES-ES"]:
-            print(
-                "WARNING: Invalid language in config file. Switching to EN-US"
-            )
-            self.config["language"] = "EN-US"
 
     def log(self, text: str, dt: Optional[datetime] = None) -> None:
         # dt = dt or self.data[data_name].datetime.datetime(0)

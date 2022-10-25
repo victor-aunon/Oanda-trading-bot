@@ -22,7 +22,8 @@ class BaseStrategy(bt.Strategy):
     def __init__(self, **kwargs) -> None:
         super().__init__()
         self.config: ConfigType = kwargs["config"]
-        self._check_config()
+        self.timeframes = self.config["timeframes"]
+        self._check_broker()
         self.instruments: List[str] = self.config["instruments"]
         self.account_type: str = self.config["account_type"]
         self.account_currency: str = self.config["account_currency"]
@@ -31,15 +32,11 @@ class BaseStrategy(bt.Strategy):
             self.config["language"], self.config["account_currency"]
         )
         if self.config["tts"]:
-            self.tts = TTS(
-                self.config["language_tts"] if "language_tts" in self.config
-                else "EN-US",
-                120
-            )
+            self.tts = TTS(self.config["language_tts"], 120)
         self.instrument_manager = InstrumentManager(self.config)
         # Create TelegramBot instance if the bot is reachable
         if "telegram_token" in self.config:
-            self._check_telegram_bot()
+            self.telegram_bot = TelegramBot(self.config)
             # Add a timer to send notifications at a certain hour
             if hasattr(self, "telegram_bot"):
                 self.add_timer(
@@ -65,7 +62,7 @@ class BaseStrategy(bt.Strategy):
     def datetime_to_str(timestamp: datetime) -> str:
         return datetime.strftime(timestamp, "%Y-%m-%d %H:%M:%S")
 
-    def _check_config(self) -> None:
+    def _check_broker(self) -> None:
         # Check oanda tokens and account id
         if self.broker.o.get_currency() is None:
             print(
@@ -74,23 +71,6 @@ class BaseStrategy(bt.Strategy):
                 "and account id.",
             )
             raise bt.StrategySkipError
-        # Check language
-        if "language" not in self.config \
-                or self.config["language"] not in LANGUAGES:
-            print(
-                "WARNING: Invalid language in config file. Switching to EN-US"
-            )
-            self.config["language"] = "EN-US"
-
-    def _check_telegram_bot(self) -> None:
-        telegram_bot = TelegramBot(self.config)
-        if telegram_bot.check_bot().status_code != 200:
-            print(
-                "WARNING: Invalid Telegram bot token access. Check the config",
-                "JSON file.",
-            )
-            return
-        self.telegram_bot = telegram_bot
 
     def initialize_dicts(self) -> None:
         """Implemented in child class"""

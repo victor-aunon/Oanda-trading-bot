@@ -17,9 +17,9 @@ config: ConfigType = {
     "risk": 1,
     "account_currency": "EUR",
     "language": "EN-US",
-    "timeframe_num": 5,
-    "timeframe": "Minutes",
-    "interval": "5m",
+    "timeframes": [
+        {"timeframe": "Minutes", "compression": 5, "interval": "5m"}
+    ],
     "testing": True,
     "strategy_params": {
         "macd_fast_ema": 5,
