@@ -54,6 +54,8 @@ def test_optimizer():
                 # Check that there are values
                 print(df_strats.columns)
                 for col in df_strats.columns:
+                    if col == "Best instruments":
+                        continue
                     assert any(pd.isna(df_strats[col]).values) is False
 
     # Check figures
