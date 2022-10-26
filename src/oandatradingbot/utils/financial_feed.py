@@ -23,8 +23,6 @@ class FinancialFeed:
         self.set_instrument(instrument)
         self.get_start_end()
         self.retrieve_feed()
-        if self.feed.size == 0:
-            raise SystemExit("Invalid instrument, not found in Yahoo Finance")
 
     def set_instrument(self, instrument: str) -> None:
         market = "fx" if instrument.split("_")[0] not in CRYPTOS else "crypto"
@@ -50,7 +48,7 @@ class FinancialFeed:
             self.start = (datetime.now() - timedelta(days=30 * 365)).date()
             self.end = (datetime.now() + timedelta(days=1)).date()
 
-    def retrieve_feed(self) -> None:
+    def retrieve_feed(self, counter: int = 0) -> None:
         feed: DataFrame = yf.download(
             tickers=self.instrument,
             start=self.start,
@@ -62,10 +60,11 @@ class FinancialFeed:
             feed = feed.tz_localize('UTC')
         except Exception:
             print("Cannot determine feed timezone. Assuming UTC.")
-            if feed.shape[0] == 0:
+            if feed.size == 0 and counter < 3:
                 time.sleep(1)
-                self.retrieve_feed()
-            pass
+                return self.retrieve_feed(counter + 1)
+        if feed.size == 0:
+            raise SystemExit("Invalid instrument, not found in Yahoo Finance")
         self.feed = feed
 
     def get_feed(self) -> DataFrame:
