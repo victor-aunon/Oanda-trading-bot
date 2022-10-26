@@ -22,7 +22,11 @@ def check_config(
     config: ConfigType,
     mode: Literal["backtest", "optimize", "live"]
 ) -> ConfigType:
+
+    # Make a deepcopy of config to not alter the original dictionary
     ch_config = copy.deepcopy(config)
+
+    # Check mandatory fields
     if mode != "live" and "results_path" not in config:
         raise SystemExit(
             "ERROR: Change the name of the results_path before backtesting"
@@ -48,8 +52,16 @@ def check_config(
         raise SystemExit(
             "ERROR: Please define the strategy parameters in the config file"
         )
-    # Default database
+    if "account_currency" not in ch_config:
+        raise SystemExit(
+            "ERROR: Please define the account currency symbol: EUR, USD, ..."
+        )
+
+    # Default database if database_uri is not provided
     if mode == "live" and "database_uri" not in config:
+        if "testing" not in config:
+            ch_config["testing"] = False
+
         if ch_config["testing"]:
             db_path = os.path.abspath(
                 os.path.join(ch_config["testing_directory"], 'trades.db')
@@ -65,13 +77,13 @@ def check_config(
             f"Creating a sqlite database at {db_path}"
         )
         ch_config["database_uri"] = f"sqlite:///{db_path}"
+
+    # Check database connection
     if mode == "live" and "database_uri" in ch_config:
         repository = Repository(ch_config["database_uri"])
         repository._check_session()
-    if "account_currency" not in ch_config:
-        raise SystemExit(
-            "ERROR: Please define the account currency symbol: EUR, USD, ..."
-        )
+
+    # Check Telegram token and chat id
     if mode == "live":
         if "telegram_token" in config and "telegram_chat_id" not in config:
             raise SystemExit(
@@ -88,6 +100,8 @@ def check_config(
                     "ERROR: Invalid Telegram bot token access. "
                     "Check the config JSON file.",
                 )
+
+    # Setting default language if not provided or invalid
     if "language" not in ch_config or ch_config["language"] not in LANGUAGES:
         print("WARNING: Invalid language in config file, switching to EN-US")
         ch_config["language"] = "EN-US"
@@ -101,6 +115,7 @@ def check_config(
     ch_config["optimize"] = True if mode == "optimize" else False
     if "testing" not in config:
         ch_config["testing"] = False
+
     # Manage account_type (internal field) and check oanda token
     if mode == "live":
         if "practice" not in config:
@@ -120,6 +135,8 @@ def check_config(
             raise SystemExit(
                 "ERROR: Please define the oanda_token in the config file"
             )
+
+        # Make a request to Oanda to check token and account id
         check_oanda_account(
             ch_config["practice"],
             ch_config["oanda_token"],
