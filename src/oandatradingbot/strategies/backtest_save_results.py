@@ -1,7 +1,6 @@
 # Libraries
 from datetime import datetime
 import os
-import sys
 from typing import Dict, List, Union
 
 # Packages
@@ -27,8 +26,7 @@ class SaveResults:
             if e.errno == 17:
                 pass
             else:
-                print(e)
-                sys.exit()
+                raise SystemExit(e)
 
     def save_optimization_results(
         self,

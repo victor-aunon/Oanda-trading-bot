@@ -30,7 +30,7 @@ class Summarizer:
 
     def _get_strategy_summary(self) -> List[Dict[str, Any]]:
 
-        results_list = []
+        strats_results = []
 
         for strategy in self.strat_files:
             df_strat = pd.read_csv(
@@ -66,14 +66,36 @@ class Summarizer:
                     res[f"Lost {inst}"] = df_strat[f"Lost {inst}"][0]
                     res[f"Returns {inst}"] = df_strat[f"Returns {inst}"][0]
                 except KeyError:
-                    res[f"Trades {inst}"] = 0.0
-                    res[f"Won {inst}"] = 0.0
+                    res[f"Trades {inst}"] = 0
+                    res[f"Won {inst}"] = 0
                     res[f"Lost {inst}"] = 0
                     res[f"Returns {inst}"] = 0.0
 
-            results_list.append(res)
+            res["Best instruments"] = self._get_best_instruments(res)
 
-        return results_list
+            strats_results.append(res)
+
+        return strats_results
+
+    def _get_best_instruments(self, results: Dict[str, Any]) -> str:
+
+        traded_instruments = [
+            ins for ins in self.instruments if results[f"Trades {ins}"] > 0
+        ]
+        stats = []
+
+        for ins in traded_instruments:
+            stats.append({
+                "instrument": ins,
+                "win_rate": results[f"Won {ins}"] / results[f"Trades {ins}"],
+                "trades": results[f"Trades {ins}"]
+            })
+
+        stats_pd = pd.DataFrame(stats)
+        stats_pd = stats_pd[stats_pd["win_rate"] >= 0.5].sort_values(
+            by=["trades"], ascending=False
+        )
+        return ", ".join(stats_pd["instrument"].values)
 
     def _remove_temp_files(self):
         for file in self.strat_files:
@@ -85,7 +107,7 @@ class Summarizer:
 
     def save_optimization_results(self) -> None:
 
-        results_list = self._get_strategy_summary()
+        strats_results = self._get_strategy_summary()
 
         summary_file = os.path.join(
             self.results_path,
@@ -115,11 +137,11 @@ class Summarizer:
 
         # Create the trades table
         worksheet.add_table(
-            0, 0, len(results_list), len(results_list[0].keys()) - 1,
-            {"columns": [{"header": col} for col in results_list[0].keys()]}
+            0, 0, len(strats_results), len(strats_results[0].keys()) - 1,
+            {"columns": [{"header": col} for col in strats_results[0].keys()]}
         )
 
-        for i, trade in enumerate(results_list):
+        for i, trade in enumerate(strats_results):
             worksheet.write_row(
                 i + 1, 0, trade.values(),
                 cell_format=successful if trade["Win rate"] >= 0.5
@@ -128,25 +150,30 @@ class Summarizer:
 
         workbook.close()
 
-        results_list.sort(
+        strats_results.sort(
             key=lambda r: r["Win rate"], reverse=True  # type: ignore
         )
 
         print("============================================")
         print("************* BEST STRATEGIES **************")
         print(
-            f"{results_list[0]['Name']} --> Win rate: "
-            f"{results_list[0]['Win rate']:.3f}"
+            f"{strats_results[0]['Name']} --> Win rate: "
+            f"{strats_results[0]['Win rate']:.3f}\n"
+            f"    Best instruments: {strats_results[0]['Best instruments']}"
         )
-        if len(results_list) > 1:
+        if len(strats_results) > 1:
             print(
-                f"{results_list[1]['Name']} --> Win rate: "
-                f"{results_list[1]['Win rate']:.3f}"
+                f"{strats_results[1]['Name']} --> Win rate: "
+                f"{strats_results[1]['Win rate']:.3f}\n"
+                f"    Best instruments: "
+                f"{strats_results[1]['Best instruments']}"
             )
-        if len(results_list) > 2:
+        if len(strats_results) > 2:
             print(
-                f"{results_list[2]['Name']} --> Win rate: "
-                f"{results_list[2]['Win rate']:.3f}"
+                f"{strats_results[2]['Name']} --> Win rate: "
+                f"{strats_results[2]['Win rate']:.3f}\n"
+                f"    Best instruments: "
+                f"{strats_results[2]['Best instruments']}"
             )
 
     def save_instruments_plots(self):
