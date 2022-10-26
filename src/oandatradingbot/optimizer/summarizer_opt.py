@@ -202,10 +202,14 @@ class Summarizer:
                     df_strats.loc[
                         df_strats["Name"] == strategy, f"Returns {inst}"
                     ].item() / self.initial_cash * 100
-                res_dict["Win rate"][inst] = \
-                    df_strats.loc[
-                        df_strats["Name"] == strategy, f"Won {inst}"
-                    ].item() / res_dict["Trades"][inst] * 100
+                try:
+                    res_dict["Win rate"][inst] = \
+                        df_strats.loc[
+                            df_strats["Name"] == strategy, f"Won {inst}"
+                        ].item() / res_dict["Trades"][inst] * 100
+                except ZeroDivisionError:
+                    res_dict["Win rate"][inst] = 0.0
+
             trades_keys = sorted(
                 res_dict["Trades"],
                 key=res_dict["Trades"].get,  # type: ignore
