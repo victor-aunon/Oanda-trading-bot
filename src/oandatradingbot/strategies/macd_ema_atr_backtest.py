@@ -52,20 +52,28 @@ class MacdEmaAtrBackTest(BaseBackTestStrategy):
         # Fill the previous dictionaries
         for instrument in self.instruments:
             # Indicators
-            datas: List[LineIterator] = [d for d in self.datas
-                                         if instrument in d._name]
-            data = datas[0]
-            self.data[instrument] = data
+            data0: LineIterator = [
+                d for d in self.datas if d._name == instrument
+            ][0]
+            if len(self.timeframes) > 1:
+                data1: LineIterator = [
+                    d for d in self.datas if instrument in d._name
+                    and d._name != data0._name
+                ][0]
+            self.data[instrument] = data0
             self.macd[instrument] = MACD(
-                data.close,
+                data0.close,
                 period_me1=self.p.macd_fast_ema,
                 period_me2=self.p.macd_slow_ema,
                 period_signal=self.p.macd_signal_ema,
             )
             self.ema[instrument] = []
-            for data, period in zip(self.datas, [self.p.ema_period, 100]):
-                self.ema[instrument].append(EMA(data.close, period=period))
-            self.atr[instrument] = ATR(data, period=self.p.atr_period)
+            self.ema[instrument].append(
+                EMA(data0.close, period=self.p.ema_period)
+            )
+            if len(self.timeframes) > 1:
+                self.ema[instrument].append(EMA(data1.close, period=100))
+            self.atr[instrument] = ATR(data0, period=self.p.atr_period)
             self.data_ready[instrument] = False
 
     def get_stop_loss(self, instrument: str) -> float:
