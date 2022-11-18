@@ -124,7 +124,7 @@ class TelegramBot:
         return msg
 
     def manage_notifications(self, now: datetime = datetime.utcnow()) -> int:
-        if self.report_freq == "Daily":
+        if self.report_freq in ["Daily", "Trade"]:
             response = self.daily_report(now)
             if response is not None and response.status_code == 200:
                 print(

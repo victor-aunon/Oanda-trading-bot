@@ -2,6 +2,9 @@
 from datetime import datetime
 import os
 
+# Packages
+import pytest
+
 # Local
 from oandatradingbot.repository.repository import Repository
 from oandatradingbot.types.config import ConfigType
@@ -48,7 +51,7 @@ def test_daily_report():
     ).status_code == 200  # type: ignore [union-attr]
 
 
-def test_weekly_report():
+def test_weekly_report_on_fridays():
     repository = Repository(db_uri)
 
     repository.save_trade(trade3)
@@ -62,13 +65,19 @@ def test_weekly_report():
 
 
 def test_manage_notifications_should_not_send_reports():
+    """
+    Should not send dayly report if telegra_report_frequency is set to
+    Weekly and it is not Friday
+    """
+    config["telegram_report_frequency"] = "Weekly"
     tb = TelegramBot(config)
 
     assert tb.manage_notifications(datetime(2022, 10, 5, 22, 0)) == 0
 
 
-def test_manage_notifications_daily():
-    config["telegram_report_frequency"] = "Daily"
+@pytest.mark.parametrize("frequency", ["Trade", "Daily"])
+def test_manage_notifications_daily(frequency):
+    config["telegram_report_frequency"] = frequency
     tb = TelegramBot(config)
 
     assert tb.manage_notifications(datetime(2022, 10, 5, 22, 0)) == 1
